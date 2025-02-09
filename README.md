@@ -16,6 +16,20 @@ AlphaFold3:
 
 AlphaFold2 complex of RAF1, KSR1, and MEK1
 
+    Chn1 Chn2 PAE Dist   Type   ipTM_af       ipSAE  ipTM_d0chn ipSAE_d0chn ipSAE_d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb
+    A    B     15   15   asym     0.430    0.377610    0.662062    0.874327    0.763488      289   1571    550    6.25   12.57    8.27    259     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    B    A     15   15   asym     0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    255     286      89      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    A    B     15   15   max      0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    286     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    
+    A    C     15   15   asym     0.430    0.748725    0.644246    0.797952    0.734552      362   1041    635    6.91   10.71    8.77    273     362     107      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    C    A     15   15   asym     0.430    0.424375    0.607214    0.807980    0.735115      285   1041    597    6.21   10.71    8.55    312     285      84     106   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    A    C     15   15   max      0.430    0.748725    0.644246    0.807980    0.735115      362   1041    597    6.91   10.71    8.55    285     362     107      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    
+    B    C     15   15   asym     0.430    0.542510    0.326022    0.581319    0.418832      350   1316    566    6.81   11.74    8.37    213     353       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    C    B     15   15   asym     0.430    0.282392    0.316282    0.612731    0.450441      287   1316    566    6.23   11.74    8.37    278     288       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    B    C     15   15   max      0.430    0.542510    0.326022    0.612731    0.450441      350   1316    566    6.81   11.74    8.37    288     353       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+
+
 **Chn1**=first chain
 
 **Chn2**=second chain
@@ -36,38 +50,26 @@ AlphaFold2 complex of RAF1, KSR1, and MEK1
 
 **ipSAE_d0dom**=ipSAE calculated with PAE cutoff and d0 = total number of residues in both chains with any interchain PAE<cutoff
 
-n0res=number of residues for d0 in ipSAE calculation
+**n0res**=number of residues for d0 in ipSAE calculation
 
-n0chn=number of residues in d0 in ipSAE_d0chn calculation
+**n0chn**=number of residues in d0 in ipSAE_d0chn calculation
 
-n0dom=number of residues in d0 in ipSAE_d0dom calculation
+**n0dom**=number of residues in d0 in ipSAE_d0dom calculation
 
-d0res=d0 for ipSAE
+**d0res**=d0 for ipSAE
 
-d0chn=d0 for ipSAE_d0chn
+**d0chn**=d0 for ipSAE_d0chn
 
-d0dom=d0 for ipSAE_d0dom
+**d0dom**=d0 for ipSAE_d0dom
 
-nres1=number of residues in chain1 with PAE<cutoff with residues in chain2
+**nres1**=number of residues in chain1 with PAE<cutoff with residues in chain2
 
-nres2=number of residues in chain2 with PAE<cutoff with residues in chain1
+**nres2**=number of residues in chain2 with PAE<cutoff with residues in chain1
 
-dist1=number of residues in chain 1 with PAE<cutoff and dist<cutoff from chain2
+**dist1**=number of residues in chain 1 with PAE<cutoff and dist<cutoff from chain2
 
-dist2=number of residues in chain 2 with PAE<cutoff and dist<cutoff from chain1
+**dist2**=number of residues in chain 2 with PAE<cutoff and dist<cutoff from chain1
 
-pdb=AlphaFold filename
+**pdb**=AlphaFold filename
 
-    Chn1 Chn2 PAE Dist   Type   ipTM_af       ipSAE  ipTM_d0chn ipSAE_d0chn ipSAE_d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb
-    A    B     15   15   asym     0.430    0.377610    0.662062    0.874327    0.763488      289   1571    550    6.25   12.57    8.27    259     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    B    A     15   15   asym     0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    255     286      89      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    A    B     15   15   max      0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    286     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    
-    A    C     15   15   asym     0.430    0.748725    0.644246    0.797952    0.734552      362   1041    635    6.91   10.71    8.77    273     362     107      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    C    A     15   15   asym     0.430    0.424375    0.607214    0.807980    0.735115      285   1041    597    6.21   10.71    8.55    312     285      84     106   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    A    C     15   15   max      0.430    0.748725    0.644246    0.807980    0.735115      362   1041    597    6.91   10.71    8.55    285     362     107      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    
-    B    C     15   15   asym     0.430    0.542510    0.326022    0.581319    0.418832      350   1316    566    6.81   11.74    8.37    213     353       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    C    B     15   15   asym     0.430    0.282392    0.316282    0.612731    0.450441      287   1316    566    6.23   11.74    8.37    278     288       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    B    C     15   15   max      0.430    0.542510    0.326022    0.612731    0.450441      350   1316    566    6.81   11.74    8.37    288     353       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
 
