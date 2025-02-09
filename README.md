@@ -15,6 +15,7 @@ AlphaFold3:
 # Output
 
 AlphaFold2 complex of RAF1, KSR1, and MEK1
+
     Chn1 Chn2 PAE Dist   Type   ipTM_af       ipSAE  ipTM_d0chn ipSAE_d0chn ipSAE_d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb
     A    B     15   15   asym     0.430    0.377610    0.662062    0.874327    0.763488      289   1571    550    6.25   12.57    8.27    259     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
     B    A     15   15   asym     0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    255     286      89      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
