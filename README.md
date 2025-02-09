@@ -20,15 +20,43 @@ AlphaFold2 complex of RAF1, KSR1, and MEK1
 
 **Chn2**=second chain
 
-PAE=PAE cutoff
-Dist=Distance cutoff for CA-CA contacts   
-Type="asym" or "max"; asym means asymmetric ipTM/ipSAE values; max is maximum of asym values   
-ipTM_af=AlphaFold ipTM values. For AF2, this is for whole complex. For AF3, this is symmetric pairwise value.   
-ipSAE=ipSAE value for given PAE cutoff and d0 determined by number of residues in 2nd chain with PAE<cutoff 
-ipTM_d0chn=ipTM calculated from PAE matrix and d0 = sum of chain lengths 
-ipSAE_d0chn=ipSAE calculated with PAE cutoff and d0 = sum of chain lengths
-ipSAE_d0dom=ipSAE calculated with PAE cutoff and d0 = total number of residues in both chains with any interchain PAE<cutoff
-d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb
+**PAE**=PAE cutoff
+
+**Dist**=Distance cutoff for CA-CA contacts
+
+**Type**="asym" or "max"; asym means asymmetric ipTM/ipSAE values; max is maximum of asym values
+
+**ipTM_af**=AlphaFold ipTM values. For AF2, this is for whole complex. For AF3, this is symmetric pairwise value.   
+
+**ipSAE**=ipSAE value for given PAE cutoff and d0 determined by number of residues in 2nd chain with PAE<cutoff 
+
+**ipTM_d0chn**=ipTM calculated from PAE matrix and d0 = sum of chain lengths 
+
+**ipSAE_d0chn**=ipSAE calculated with PAE cutoff and d0 = sum of chain lengths
+
+**ipSAE_d0dom**=ipSAE calculated with PAE cutoff and d0 = total number of residues in both chains with any interchain PAE<cutoff
+
+n0res=number of residues for d0 in ipSAE calculation
+
+n0chn=number of residues in d0 in ipSAE_d0chn calculation
+
+n0dom=number of residues in d0 in ipSAE_d0dom calculation
+
+d0res=d0 for ipSAE
+
+d0chn=d0 for ipSAE_d0chn
+
+d0dom=d0 for ipSAE_d0dom
+
+nres1=number of residues in chain1 with PAE<cutoff with residues in chain2
+
+nres2=number of residues in chain2 with PAE<cutoff with residues in chain1
+
+dist1=number of residues in chain 1 with PAE<cutoff and dist<cutoff from chain2
+
+dist2=number of residues in chain 2 with PAE<cutoff and dist<cutoff from chain1
+
+pdb=AlphaFold filename
 
     Chn1 Chn2 PAE Dist   Type   ipTM_af       ipSAE  ipTM_d0chn ipSAE_d0chn ipSAE_d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb
     A    B     15   15   asym     0.430    0.377610    0.662062    0.874327    0.763488      289   1571    550    6.25   12.57    8.27    259     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
