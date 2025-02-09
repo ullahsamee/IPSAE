@@ -9,4 +9,5 @@ AlphaFold2:
 
 AlphaFold3:
 
-python ipsae.py <path_to_json_file> <path_to_af3_cif_file>  <pae_cutoff> <dist_cutoff>                    python ipsae.py fold_aurka_tpx2_full_data_0.json  fold_aurka_tpx2_model_0.cif 10 10
+     python ipsae.py <path_to_json_file> <path_to_af3_cif_file>  <pae_cutoff> <dist_cutoff>                    
+     python ipsae.py fold_aurka_tpx2_full_data_0.json  fold_aurka_tpx2_model_0.cif 10 10
