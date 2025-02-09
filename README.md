@@ -17,7 +17,9 @@ AlphaFold3:
 AlphaFold2 complex of RAF1, KSR1, and MEK1
 
 **Chn1**=first chain
+
 **Chn2**=second chain
+
 PAE=PAE cutoff
 Dist=Distance cutoff for CA-CA contacts   
 Type="asym" or "max"; asym means asymmetric ipTM/ipSAE values; max is maximum of asym values   
