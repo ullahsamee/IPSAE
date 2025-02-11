@@ -1,13 +1,23 @@
+# ipsae.py
+# script for calculating the ipSAE score for scoring pairwise protein-protein interactions in AlphaFold2 and AlphaFold3 models
+# Roland Dunbrack
+# Fox Chase Cancer Center
+# version 1
+# February 11, 2025
+# MIT license: script can be modified and redistributed for non-commercial and commercial use, as long as this information is reproduced.
+#
+# It may be necessary to install numpy with the following command:
+#      pip install numpy
+
 # Usage:
 
 #  python ipsae.py <path_to_json_file> <path_to_af2_pdb_file>  <pae_cutoff> <dist_cutoff>
 #  python ipsae.py <path_to_json_file> <path_to_af3_cif_file>  <pae_cutoff> <dist_cutoff>
 
 import sys, os
-import numpy as np
 import json
+import numpy as np
 np.set_printoptions(threshold=np.inf)  # for printing out full numpy arrays for debugging
-
 
 
 # Input and output files and parameters
@@ -160,7 +170,7 @@ def parse_cif_atom_line(line):
 
 
 
-# Function for pymol scripts
+# Function for printing out residue numbers in PyMOL scripts
 def contiguous_ranges(numbers):
     if not numbers:  # Check if the set is empty
         return
@@ -189,7 +199,6 @@ def contiguous_ranges(numbers):
     # Join all ranges with a plus sign and print the result
     string='+'.join(ranges)
     return(string)
-
 
 
 
@@ -227,7 +236,6 @@ unique_chains = np.unique(chains)
 
 # Calculate distance matrix using NumPy broadcasting
 distances = np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :])**2).sum(axis=2))
-
 
 
 
@@ -433,7 +441,7 @@ for chain1 in unique_chains:
         
 # calculate interchain by_residue values: pTM(i) or psAE(i)
 
-OUT2.write("chn1 chn2 i numres plddt  n0chn n0dom   n0res   d0num      d0chn      d0dom   d0res tm_af2_d0num tm_d0chn af2_d0num pae_d0chn pae_d0dom pae_d0res\n")
+OUT2.write("i   AlignChn ScoredChain  AlignResNum  AlignResType  AlignRespLDDT      n0chn  n0dom  n0res    d0chn     d0dom     d0res   ipTM_pae  ipSAE_d0chn ipSAE_d0dom    ipSAE \n")
 for chain1 in unique_chains:
     for chain2 in unique_chains:
         if chain1 == chain2:
@@ -465,19 +473,21 @@ for chain1 in unique_chains:
             ptm_row_d0res=ptm_func_vec(pae_matrix[i], d0res_byres[chain1][chain2][i])
             ipsae_d0res_byres[chain1][chain2][i] = ptm_row_d0res[valid_pairs].mean() if valid_pairs.any() else 0.0
 
-            outstring = f'{chain1}  {chain2} '+ (
-                f'{i:5d}  '
-                f'{int(numres):5d}  '
-                f'{plddt[i]:8.3f}   '
+            outstring = f'{i+1:<4d}    ' + (
+                f'{chain1:4}      '
+                f'{chain2:4}      '
+                f'{residues[i]["resnum"]:4d}           '
+                f'{residues[i]["res"]:3}        '
+                f'{plddt[i]:8.2f}         '
                 f'{int(n0chn[chain1][chain2]):5d}  '
                 f'{int(n0dom[chain1][chain2]):5d}  '
                 f'{int(n0res_byres[chain1][chain2][i]):5d}  '
                 f'{d0chn[chain1][chain2]:8.3f}  '
                 f'{d0dom[chain1][chain2]:8.3f}  '
-                f'{d0res_byres[chain1][chain2][i]:8.3f}  '
-                f'{iptm_d0chn_byres[chain1][chain2][i]:8.4f}  '
-                f'{ipsae_d0chn_byres[chain1][chain2][i]:8.4f}  '
-                f'{ipsae_d0dom_byres[chain1][chain2][i]:8.4f}  '
+                f'{d0res_byres[chain1][chain2][i]:8.3f}   '
+                f'{iptm_d0chn_byres[chain1][chain2][i]:8.4f}    '
+                f'{ipsae_d0chn_byres[chain1][chain2][i]:8.4f}    '
+                f'{ipsae_d0dom_byres[chain1][chain2][i]:8.4f}    '
                 f'{ipsae_d0res_byres[chain1][chain2][i]:8.4f}\n'
             )
             OUT2.write(outstring)
@@ -576,7 +586,7 @@ for chain1 in unique_chains:
                 d0res_max[chain2][chain1]=d0res[chain2][chain1]
                 
         
-chaincolor={'A':'magenta', 'B':'marine', 'C':'lime', 'D':'orange', 'E':'yellow', 'F':'cyan'}
+chaincolor={'A':'magenta', 'B':'marine', 'C':'lime', 'D':'orange', 'E':'yellow', 'F':'cyan', 'G':'lightorange', 'H':'pink'}
 
 chainpairs=set()
 for chain1 in unique_chains:
@@ -584,7 +594,8 @@ for chain1 in unique_chains:
         if chain1 >= chain2: continue
         chainpairs.add(chain1 + "-" + chain2)
 
-OUT.write("\nChn1 Chn2 PAE Dist   Type   ipTM_af       ipSAE  ipTM_d0chn ipSAE_d0chn ipSAE_d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb\n")
+OUT.write("\nChn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model\n")
+PML.write("# Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model\n")
 for pair in sorted(chainpairs):
     (chain_a, chain_b) = pair.split("-")
     pair1 = (chain_a, chain_b)
@@ -604,11 +615,11 @@ for pair in sorted(chainpairs):
         if af3: iptm_af = iptm_af3[chain1][chain2]  # symmetric value for each chain pair
         
         outstring=f'{chain1}    {chain2}     {pae_string:3}  {dist_string:3}  {"asym":5} ' + (
-            f'{iptm_af:8.3f}    '
-            f'{iptm_d0chn_asym[chain1][chain2]:8.6f}    '
             f'{ipsae_d0res_asym[chain1][chain2]:8.6f}    '
             f'{ipsae_d0chn_asym[chain1][chain2]:8.6f}    '
             f'{ipsae_d0dom_asym[chain1][chain2]:8.6f}    '
+            f'{iptm_af:5.3f}    '
+            f'{iptm_d0chn_asym[chain1][chain2]:8.6f}    '
             f'{int(n0res[chain1][chain2]):5d}  '
             f'{int(n0chn[chain1][chain2]):5d}  '
             f'{int(n0dom[chain1][chain2]):5d}  '
@@ -621,7 +632,7 @@ for pair in sorted(chainpairs):
             f'{dist_residues_2:5d}   '
             f'{pdb_stem}\n')
         OUT.write(outstring)
-        PML.write("#" + outstring)
+        PML.write("# " + outstring)
         if chain1 > chain2:
             residues_1 = max(len(unique_residues_chain2[chain1][chain2]), len(unique_residues_chain1[chain2][chain1]))
             residues_2 = max(len(unique_residues_chain1[chain1][chain2]), len(unique_residues_chain2[chain2][chain1]))
@@ -629,11 +640,11 @@ for pair in sorted(chainpairs):
             dist_residues_2 = max(len(dist_unique_residues_chain1[chain1][chain2]), len(dist_unique_residues_chain2[chain2][chain1]))
             
             outstring=f'{chain2}    {chain1}     {pae_string:3}  {dist_string:3}  {"max":5} ' + (
-                f'{iptm_af:8.3f}    '
-                f'{iptm_d0chn_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0res_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0chn_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0dom_max[chain1][chain2]:8.6f}    '
+                f'{iptm_af:5.3f}    '
+                f'{iptm_d0chn_max[chain1][chain2]:8.6f}    '
                 f'{int(n0res_max[chain1][chain2]):5d}  '
                 f'{int(n0chn[chain1][chain2]):5d}  '
                 f'{int(n0dom_max[chain1][chain2]):5d}  '
@@ -646,7 +657,7 @@ for pair in sorted(chainpairs):
                 f'{dist_residues_2:5d}   '
                 f'{pdb_stem}\n')
             OUT.write(outstring)
-            PML.write("#" + outstring)
+            PML.write("# " + outstring)
                 
         chain_pair= f'color_{chain1}_{chain2}'
         chain1_residues = f'chain  {chain1} and resi {contiguous_ranges(unique_residues_chain1[chain1][chain2])}'
