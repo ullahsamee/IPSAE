@@ -16,18 +16,20 @@ AlphaFold3:
 
 AlphaFold2 complex of RAF1, KSR1, and MEK1
 
-    Chn1 Chn2 PAE Dist   Type   ipTM_af       ipSAE  ipTM_d0chn ipSAE_d0chn ipSAE_d0dom    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2   pdb
-    A    B     15   15   asym     0.430    0.377610    0.662062    0.874327    0.763488      289   1571    550    6.25   12.57    8.27    259     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    B    A     15   15   asym     0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    255     286      89      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    A    B     15   15   max      0.430    0.477229    0.664869    0.879583    0.767981      285   1571    541    6.21   12.57    8.21    286     291      92      89   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    
-    A    C     15   15   asym     0.430    0.748725    0.644246    0.797952    0.734552      362   1041    635    6.91   10.71    8.77    273     362     107      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    C    A     15   15   asym     0.430    0.424375    0.607214    0.807980    0.735115      285   1041    597    6.21   10.71    8.55    312     285      84     106   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    A    C     15   15   max      0.430    0.748725    0.644246    0.807980    0.735115      362   1041    597    6.91   10.71    8.55    285     362     107      92   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    
-    B    C     15   15   asym     0.430    0.542510    0.326022    0.581319    0.418832      350   1316    566    6.81   11.74    8.37    213     353       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    C    B     15   15   asym     0.430    0.282392    0.316282    0.612731    0.450441      287   1316    566    6.23   11.74    8.37    278     288       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
-    B    C     15   15   max      0.430    0.542510    0.326022    0.612731    0.450441      350   1316    566    6.81   11.74    8.37    288     353       0       0   RAF1_KSR1_MEK1_unrelaxed_rank_001_alphafold2_multimer_v3_model_5_seed_000
+    Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
+    A    B     15   15   asym  0.563173    0.824097    0.678527    0.460    0.362276      292   1571    541    6.28   12.57    8.21    249     292      90      83   fold_raf1_ksr1_mek1_model_0
+    B    A     15   15   asym  0.546718    0.818835    0.671409    0.460    0.442774      278   1571    539    6.14   12.57    8.20    259     280      83      92   fold_raf1_ksr1_mek1_model_0
+    A    B     15   15   max   0.563173    0.824097    0.678527    0.460    0.442774      292   1571    541    6.28   12.57    8.21    280     292      92      83   fold_raf1_ksr1_mek1_model_0
+
+    A    C     15   15   asym  0.261359    0.484143    0.338764    0.510    0.428632      319   1041    491    6.54   10.71    7.88    171     320       0       0   fold_raf1_ksr1_mek1_model_0
+    C    A     15   15   asym  0.232004    0.486093    0.350874    0.510    0.270827      260   1041    513    5.96   10.71    8.03    250     263       0       0   fold_raf1_ksr1_mek1_model_0
+    A    C     15   15   max   0.261359    0.486093    0.350874    0.510    0.428632      319   1041    513    6.54   10.71    8.03    263     320       0       0   fold_raf1_ksr1_mek1_model_0
+
+    B    C     15   15   asym  0.636110    0.829537    0.732184    0.770    0.751586      344   1316    607    6.76   11.74    8.61    262     345      69      72   fold_raf1_ksr1_mek1_model_0
+    C    B     15   15   asym  0.559980    0.802212    0.692571    0.770    0.343057      291   1316    598    6.27   11.74    8.56    307     291      71      69   fold_raf1_ksr1_mek1_model_0
+    B    C     15   15   max   0.636110    0.829537    0.732184    0.770    0.751586      344   1316    607    6.76   11.74    8.61    291     345      69      72   fold_raf1_ksr1_mek1_model_0
+
+
 
 
 **Chn1**=first chain
