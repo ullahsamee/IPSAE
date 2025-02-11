@@ -42,15 +42,15 @@ AlphaFold2 complex of RAF1, KSR1, and MEK1
 
 **Type**="asym" or "max"; asym means asymmetric ipTM/ipSAE values; max is maximum of asym values
 
-**ipTM_af**=AlphaFold ipTM values. For AF2, this is for whole complex. For AF3, this is symmetric pairwise value.   
-
 **ipSAE**=ipSAE value for given PAE cutoff and d0 determined by number of residues in 2nd chain with PAE<cutoff 
-
-**ipTM_d0chn**=ipTM calculated from PAE matrix and d0 = sum of chain lengths 
 
 **ipSAE_d0chn**=ipSAE calculated with PAE cutoff and d0 = sum of chain lengths
 
 **ipSAE_d0dom**=ipSAE calculated with PAE cutoff and d0 = total number of residues in both chains with any interchain PAE<cutoff
+
+**ipTM_af**=AlphaFold ipTM values. For AF2, this is for whole complex. For AF3, this is symmetric pairwise value.   
+
+**ipTM_d0chn**=ipTM calculated from PAE matrix and d0 = sum of chain lengths 
 
 **n0res**=number of residues for d0 in ipSAE calculation
 
