@@ -12,7 +12,7 @@ AlphaFold3:
      python ipsae.py <path_to_json_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff>                    
      python ipsae.py fold_aurka_tpx2_full_data_0.json fold_aurka_tpx2_model_0.cif 10 10
 
-# Output
+# Output chain-chain score file
 
 AlphaFold2 complex of RAF1, KSR1, and MEK1
 
@@ -74,4 +74,45 @@ AlphaFold2 complex of RAF1, KSR1, and MEK1
 
 **pdb**=AlphaFold filename
 
+# Output by-residue score file
 
+    i   AlignChn ScoredChain  AlignResNum  AlignResType  AlignRespLDDT      n0chn  n0dom  n0res    d0chn     d0dom     d0res    ptm_pae   psae_d0chn  psae_d0dom  psae_d0res 
+    1       A         B            1           MET           16.32          1571    541      0    12.569     8.210     1.001     0.1362      0.0000      0.0000      0.0000
+    2       A         B            2           GLU           22.12          1571    541      0    12.569     8.210     1.001     0.1362      0.0000      0.0000      0.0000
+    3       A         B            3           HIS           24.73          1571    541      0    12.569     8.210     1.001     0.1362      0.0000      0.0000      0.0000
+    4       A         B            4           ILE           25.78          1571    541      0    12.569     8.210     1.001     0.1362      0.0000      0.0000      0.0000
+    5       A         B            5           GLN           25.27          1571    541      0    12.569     8.210     1.001     0.1362      0.0000      0.0000      0.0000
+    6       A         B            6           GLY           28.12          1571    541      0    12.569     8.210     1.001     0.1363      0.0000      0.0000      0.0000
+
+
+**i**=residue in model (from 1 to total number of residues in model)
+
+**AlignChn**=chainid of aligned residue (in PAE calculation)
+
+**ScoredChn**= chainid of scored residues (with PAE less than cutoff)
+
+**AlignResNum**=residue number of aligned residue
+
+**AlignResType**=residue type of aligned residue (three letter code)
+
+**AlignRespLDDT**=plDDT of aligned residue
+
+**n0chn**=number of residues in d0 in ipSAE_d0chn calculation
+
+**n0dom**=number of residues in d0 in ipSAE_d0dom calculation
+
+**n0res**=number of residues for d0 in ipSAE calculation
+
+**d0chn**=d0 for ipSAE_d0chn
+
+**d0dom**=d0 for ipSAE_d0dom
+
+**d0res**=d0 for ipSAE
+
+**pTM_pae**=ipTM calculated from PAE matrix and d0 = sum of chain lengths 
+
+**pSAE_d0chn**=residue-specific ipSAE calculated with PAE cutoff and d0 = sum of chain lengths (n0chn)
+
+**pSAE_d0dom**=residue-specific ipSAE calculated with PAE cutoff and d0 = total number of residues in both chains with any interchain PAE<cutoff (n0dom)
+
+**pSAE**=residue-specific ipSAE value for given PAE cutoff and d0 determined by number of residues in 2nd chain with PAE<cutoff (n0res)
