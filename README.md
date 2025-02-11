@@ -1,6 +1,11 @@
 # IPSAE
 Scoring function for interprotein interactions in AlphaFold2 and AlphaFold3
 
+# Installation
+Simply download the Python script ipsae.py. It may be necessary to install the Python numpy package with:
+
+    pip install numpy
+
 # Usage:                                                                                                                                                                                                     
 AlphaFold2:
 
