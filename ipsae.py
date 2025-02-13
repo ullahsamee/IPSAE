@@ -306,11 +306,15 @@ if af3:
     pae_matrix = pae_matrix_af3[np.ix_(mask.astype(bool), mask.astype(bool))]
 
     # Get iptm matrix from AF3 summary_confidences file
-    json_summary_file_path=json_file_path.replace("full_data","summary_confidences")
     iptm_af3=   {chain1: {chain2: 0     for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-    if os.path.exists(json_summary_file_path):
-        with open(json_summary_file_path,'r') as file:
-            data_summary=json.load(file)
+
+    json_summary_file_path1="summary_" + json_file_path  # downloaded AF3
+    json_summary_file_path2=json_file_path.replace("full_data","summary_confidences") # AF3 server
+    json_summary_file_path=None
+    if os.path.exists(json_summary_file_path1): json_summary_file_path=json_summary_file_path1
+    elif os.path.exists(json_summary_file_path2): json_summary_file_path=json_summary_file_path2
+
+    if json_summary_file_path is not None:
         
         af3_chain_pair_iptm_data=data_summary['chain_pair_iptm']
         for chain1 in unique_chains:
