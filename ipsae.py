@@ -311,11 +311,14 @@ if af3:
     json_summary_file_path1="summary_" + json_file_path  # downloaded AF3
     json_summary_file_path2=json_file_path.replace("full_data","summary_confidences") # AF3 server
     json_summary_file_path=None
-    if os.path.exists(json_summary_file_path1): json_summary_file_path=json_summary_file_path1
-    elif os.path.exists(json_summary_file_path2): json_summary_file_path=json_summary_file_path2
+    if os.path.exists(json_summary_file_path1): 
+        json_summary_file_path=json_summary_file_path1
+    elif os.path.exists(json_summary_file_path2): 
+        json_summary_file_path=json_summary_file_path2
 
     if json_summary_file_path is not None:
-        
+        with open(json_summary_file_path, 'r') as summary_file:
+            data_summary = json.load(summary_file)
         af3_chain_pair_iptm_data=data_summary['chain_pair_iptm']
         for chain1 in unique_chains:
             nchain1=  ord(chain1) - ord('A')  # map A,B,C... to 0,1,2...
