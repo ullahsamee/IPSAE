@@ -19,7 +19,7 @@ AlphaFold3:
 
 # Output chain-chain score file
 
-AlphaFold2 complex of RAF1, KSR1, and MEK1
+AlphaFold2 complex of RAF1 (chain A), KSR1 (chain B), and MEK1 (chain C). RAF1 and KSR1 kinase domains make pseudosymmetric dimer, similar to BRAF homodimer. In this model, MEK1 kinase domain interacts directly with RAF1 kinase domain (AF3 places MEK1 on KSR1; both complexes exist in PDB). 
 
     Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
     A    B     15   15   asym  0.647603    0.868775    0.753413    0.570    0.378501      0.2342     0.0142     0.4128     290   1571    553    6.26   12.57    8.29    261     292      92      93   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
