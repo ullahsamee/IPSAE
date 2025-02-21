@@ -21,19 +21,18 @@ AlphaFold3:
 
 AlphaFold2 complex of RAF1, KSR1, and MEK1
 
-    Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
-    A    B     15   15   asym  0.563173    0.824097    0.678527    0.460    0.362276      292   1571    541    6.28   12.57    8.21    249     292      90      83   fold_raf1_ksr1_mek1_model_0
-    B    A     15   15   asym  0.546718    0.818835    0.671409    0.460    0.442774      278   1571    539    6.14   12.57    8.20    259     280      83      92   fold_raf1_ksr1_mek1_model_0
-    A    B     15   15   max   0.563173    0.824097    0.678527    0.460    0.442774      292   1571    541    6.28   12.57    8.21    280     292      92      83   fold_raf1_ksr1_mek1_model_0
-
-    A    C     15   15   asym  0.261359    0.484143    0.338764    0.510    0.428632      319   1041    491    6.54   10.71    7.88    171     320       0       0   fold_raf1_ksr1_mek1_model_0
-    C    A     15   15   asym  0.232004    0.486093    0.350874    0.510    0.270827      260   1041    513    5.96   10.71    8.03    250     263       0       0   fold_raf1_ksr1_mek1_model_0
-    A    C     15   15   max   0.261359    0.486093    0.350874    0.510    0.428632      319   1041    513    6.54   10.71    8.03    263     320       0       0   fold_raf1_ksr1_mek1_model_0
-
-    B    C     15   15   asym  0.636110    0.829537    0.732184    0.770    0.751586      344   1316    607    6.76   11.74    8.61    262     345      69      72   fold_raf1_ksr1_mek1_model_0
-    C    B     15   15   asym  0.559980    0.802212    0.692571    0.770    0.343057      291   1316    598    6.27   11.74    8.56    307     291      71      69   fold_raf1_ksr1_mek1_model_0
-    B    C     15   15   max   0.636110    0.829537    0.732184    0.770    0.751586      344   1316    607    6.76   11.74    8.61    291     345      69      72   fold_raf1_ksr1_mek1_model_0
-
+    Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model
+    A    B     15   15   asym  0.647603    0.868775    0.753413    0.570    0.378501      0.2342     0.0142     0.4128     290   1571    553    6.26   12.57    8.29    261     292      92      93   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    B    A     15   15   asym  0.641387    0.867977    0.749378    0.570    0.482265      0.2342     0.0143     0.3782     285   1571    543    6.21   12.57    8.22    255     288      95      94   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    A    B     15   15   max   0.647603    0.868775    0.753413    0.570    0.482265      0.2342     0.0143     0.3955     290   1571    553    6.26   12.57    8.29    288     292      94      95   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    
+    A    C     15   15   asym  0.666048    0.810562    0.750777    0.570    0.765550      0.3016     0.1158     0.3642     364   1041    635    6.93   10.71    8.77    270     365     114     105   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    C    A     15   15   asym  0.626076    0.818914    0.749619    0.570    0.438184      0.3016     0.0912     0.3470     284   1041    597    6.20   10.71    8.55    313     284      96     112   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    A    C     15   15   max   0.666048    0.818914    0.750777    0.570    0.765550      0.3016     0.1158     0.3556     364   1041    635    6.93   10.71    8.77    284     365     114     105   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    
+    B    C     15   15   asym  0.323178    0.576574    0.413315    0.570    0.542858      0.0000     0.0000     0.1329     352   1316    563    6.83   11.74    8.35    207     356       0       0   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    C    B     15   15   asym  0.323743    0.619089    0.457644    0.570    0.287348      0.0000     0.0000     0.1335     288   1316    566    6.24   11.74    8.37    277     289       0       0   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
+    B    C     15   15   max   0.323743    0.619089    0.457644    0.570    0.542858      0.0000     0.0000     0.1332     288   1316    566    6.24   11.74    8.37    289     356       0       0   RAF1_KSR1_MEK1_9f755_rank001_iptm0.57_ptm0.54_nrx_4_000
 
 
 
@@ -53,9 +52,15 @@ AlphaFold2 complex of RAF1, KSR1, and MEK1
 
 **ipSAE_d0dom**=ipSAE calculated with PAE cutoff and d0 = total number of residues in both chains with any interchain PAE<cutoff
 
-**ipTM_af**=AlphaFold ipTM values. For AF2, this is for whole complex. For AF3, this is symmetric pairwise value.   
+**ipTM_af**=AlphaFold ipTM values. For AF2, this is for whole complex from json file. For AF3, this is symmetric pairwise value from summary json file.   
 
-**ipTM_d0chn**=ipTM calculated from PAE matrix and d0 = sum of chain lengths 
+**ipTM_d0chn**=ipTM (no PAE cutoff) calculated from PAE matrix and d0 = sum of chain lengths 
+
+**pDockQ**=score from pLDDTs from Bryant, Pozotti, and Eloffson. https://www.nature.com/articles/s41467-022-28865-w
+
+**pDockQ2**=score based on PAE, calculated pairwise: from Zhu, Shenoy, Kundrotas, Elofsson. https://academic.oup.com/bioinformatics/article/39/7/btad424/7219714
+
+**LIS**=Local Interaction Score based on transform of PAEs from Kim, Hu, Comjean, Rodiger, Mohr, Perrimon. https://www.biorxiv.org/content/10.1101/2024.02.19.580970v1
 
 **n0res**=number of residues for d0 in ipSAE calculation
 
