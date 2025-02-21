@@ -1,9 +1,14 @@
 # ipsae.py
 # script for calculating the ipSAE score for scoring pairwise protein-protein interactions in AlphaFold2 and AlphaFold3 models
+# Also calculates:
+#    pDockQ: Bryant, Pozotti, and Eloffson. https://www.nature.com/articles/s41467-022-28865-w
+#    pDockQ2: Zhu, Shenoy, Kundrotas, Elofsson. https://academic.oup.com/bioinformatics/article/39/7/btad424/7219714
+#    LIS: Kim, Hu, Comjean, Rodiger, Mohr, Perrimon. https://www.biorxiv.org/content/10.1101/2024.02.19.580970v1
+# 
 # Roland Dunbrack
 # Fox Chase Cancer Center
-# version 1
-# February 11, 2025
+# version 2
+# February 21, 2025
 # MIT license: script can be modified and redistributed for non-commercial and commercial use, as long as this information is reproduced.
 #
 # It may be necessary to install numpy with the following command:
@@ -14,7 +19,8 @@
 #  python ipsae.py <path_to_json_file> <path_to_af2_pdb_file>  <pae_cutoff> <dist_cutoff>
 #  python ipsae.py <path_to_json_file> <path_to_af3_cif_file>  <pae_cutoff> <dist_cutoff>
 
-import sys, os
+import itertools
+import sys, os, math
 import json
 import numpy as np
 np.set_printoptions(threshold=np.inf)  # for printing out full numpy arrays for debugging
@@ -206,6 +212,7 @@ def contiguous_ranges(numbers):
 # Read PDB file to get CA coordinates, chainids, and residue numbers
 # Convert to np arrays, and calculate distances
 residues = []
+cb_residues = []
 chains = []
 with open(pdb_path, 'r') as PDB:
     for line in PDB:
@@ -226,18 +233,27 @@ with open(pdb_path, 'r') as PDB:
                     
                 })
                 chains.append(atom['chain_id'])
+            if atom['atom_name'] == "CB" or (atom['residue_name']=="GLY" and atom['atom_name']=="CA"):
+                cb_residues.append({
+                    'atom_num': atom['atom_num'],
+                    'coor': np.array([atom['x'], atom['y'], atom['z']]),
+                    'res': atom['residue_name'],
+                    'chainid': atom['chain_id'],
+                    'resnum': atom['residue_seq_num'],
+                    'residue': f"{atom['residue_name']:3}   {atom['chain_id']:3} {atom['residue_seq_num']:4}"
+                    
+                })
 
 # Convert structure information to numpy arrays
 numres = len(residues)
 CA_atom_num=  np.array([res['atom_num']-1 for res in residues])  # for AF3 atom indexing from 0
-coordinates = np.array([res['coor']       for res in residues])
+CB_atom_num=  np.array([res['atom_num']-1 for res in cb_residues])  # for AF3 atom indexing from 0
+coordinates = np.array([res['coor']       for res in cb_residues])
 chains = np.array(chains)
 unique_chains = np.unique(chains)
 
 # Calculate distance matrix using NumPy broadcasting
 distances = np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :])**2).sum(axis=2))
-
-
 
 # Load AF2 or AF3 json data and extract plddt and pae_matrix (and ptm_matrix if available)
 with open(json_file_path, 'r') as file:
@@ -250,6 +266,7 @@ if af2:
     iptm_af2 = float(data['iptm'])
     ptm_af2  = float(data['ptm'])
     plddt =      np.array(data['plddt'])
+    cb_plddt =   np.array(data['plddt'])  # for pDockQ
     pae_matrix = np.array(data['pae'])
     # internal version of Colabfold/AF2 prints out ptm_matrix in json files
     if 'ptm_matrix' in data:
@@ -259,7 +276,6 @@ if af2:
         have_ptm_matrix_af2=0
 
 if af3:
-
     # Example Alphafold3 server filenames
     #   fold_aurka_0_tpx2_0_full_data_0.json
     #   fold_aurka_0_tpx2_0_summary_confidences_0.json
@@ -267,6 +283,7 @@ if af3:
     
     atom_plddts=np.array(data['atom_plddts'])
     plddt=atom_plddts[CA_atom_num]  # pull out residue plddts from Calpha atoms
+    cb_plddt=atom_plddts[CB_atom_num]  # pull out residue plddts from Cbeta atoms for pDockQ
         
     # Get pairwise residue PAE matrix by identifying one token per protein residue.
     # Modified residues have separate tokens for each atom, so need to pull out Calpha atom as token
@@ -308,17 +325,16 @@ if af3:
     # Get iptm matrix from AF3 summary_confidences file
     iptm_af3=   {chain1: {chain2: 0     for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
 
-    json_summary_file_path1="summary_" + json_file_path  # downloaded AF3
-    json_summary_file_path2=json_file_path.replace("full_data","summary_confidences") # AF3 server
+    json_summary_file_path1="summary_" + json_file_path
+    json_summary_file_path2=json_file_path.replace("full_data","summary_confidences")
     json_summary_file_path=None
-    if os.path.exists(json_summary_file_path1): 
-        json_summary_file_path=json_summary_file_path1
-    elif os.path.exists(json_summary_file_path2): 
-        json_summary_file_path=json_summary_file_path2
-
+    if os.path.exists(json_summary_file_path1): json_summary_file_path=json_summary_file_path1    # for local AF3 installation
+    elif os.path.exists(json_summary_file_path2): json_summary_file_path=json_summary_file_path2  # for AF3 server files
+    
     if json_summary_file_path is not None:
-        with open(json_summary_file_path, 'r') as summary_file:
-            data_summary = json.load(summary_file)
+        with open(json_summary_file_path,'r') as file:
+            data_summary=json.load(file)
+            
         af3_chain_pair_iptm_data=data_summary['chain_pair_iptm']
         for chain1 in unique_chains:
             nchain1=  ord(chain1) - ord('A')  # map A,B,C... to 0,1,2...
@@ -328,8 +344,6 @@ if af3:
                 iptm_af3[chain1][chain2]=af3_chain_pair_iptm_data[nchain1][nchain2]
 
 
-
-                
 # Compute chain-pair-specific interchain PTM and PAE, count valid pairs, and count unique residues
 # First, create dictionaries of appropriate size: top keys are chain1 and chain2 where chain1 != chain2
 # Nomenclature:
@@ -394,7 +408,107 @@ unique_residues_chain1 =       {chain1: {chain2: set()            for chain2 in 
 unique_residues_chain2 =       {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
 dist_unique_residues_chain1 =  {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
 dist_unique_residues_chain2 =  {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+pDockQ_unique_residues      =  {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
 
+pDockQ               =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+pDockQ2              =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+LIS                  =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+
+
+# pDockQ
+pDockQ_cutoff=8.0
+x0=152.611
+L=0.724
+k=0.052
+b=0.018
+
+
+# pDockQ
+for chain1 in unique_chains:
+    for chain2 in unique_chains:
+        if chain1 == chain2:
+            continue
+        npairs=0
+        for i in range(numres):
+            if chains[i] != chain1:
+                continue
+            valid_pairs = (chains==chain2) & (distances[i] <= pDockQ_cutoff)
+            npairs += np.sum(valid_pairs)
+            if valid_pairs.any():
+                pDockQ_unique_residues[chain1][chain2].add(i)
+                chain2residues=np.where(valid_pairs)[0]
+
+                for residue in chain2residues:
+                    pDockQ_unique_residues[chain1][chain2].add(residue)
+                    
+        if npairs>0:
+            mean_plddt= cb_plddt[ list(pDockQ_unique_residues[chain1][chain2])].mean()
+            x=mean_plddt*math.log10(npairs)
+            pDockQ[chain1][chain2]= 0.724 / (1 + math.exp(-0.052*(x-152.611)))+0.018
+            nres=len(list(pDockQ_unique_residues[chain1][chain2]))
+        else:
+            mean_plddt=0.0
+            x=0.0
+            pDockQ[chain1][chain2]=0.0
+            nres=0
+        
+# pDockQ2
+pDockQ_cutoff=8.0
+x0=84.733
+L=1.31
+k=0.075
+b=0.005
+
+
+# pDockQ2
+for chain1 in unique_chains:
+    for chain2 in unique_chains:
+        if chain1 == chain2:
+            continue
+        npairs=0
+        sum=0.0
+        for i in range(numres):
+            if chains[i] != chain1:
+                continue
+            valid_pairs = (chains==chain2) & (distances[i] <= pDockQ_cutoff)
+            if valid_pairs.any():
+                npairs += np.sum(valid_pairs)
+                pae_list=pae_matrix[i][valid_pairs]
+                pae_list_ptm=ptm_func_vec(pae_list,10.0)
+                sum += pae_list_ptm.sum()
+            
+        if npairs>0:
+            mean_plddt= cb_plddt[ list(pDockQ_unique_residues[chain1][chain2])].mean()
+            mean_ptm = sum/npairs
+            x=mean_plddt*mean_ptm
+            pDockQ2[chain1][chain2]= 1.31 / (1 + math.exp(-0.075*(x-84.733)))+0.005
+            nres=len(list(pDockQ_unique_residues[chain1][chain2]))
+        else:
+            mean_plddt=0.0
+            x=0.0
+            pDockQ[chain1][chain2]=0.0
+            nres=0
+        
+# LIS
+
+for chain1 in unique_chains:
+    for chain2 in unique_chains:
+        if chain1==chain2: continue
+        
+        mask = (chains[:, None] == chain1) & (chains[None, :] == chain2)  # Select residues for (chain1, chain2)
+        selected_pae = pae_matrix[mask]  # Get PAE values for this pair
+        
+        if selected_pae.size > 0:  # Ensure we have values
+            valid_pae = selected_pae[selected_pae <= 12]  # Apply the threshold
+            if valid_pae.size > 0:
+                scores = (12 - valid_pae) / 12  # Compute scores
+                avg_score = np.mean(scores)  # Average score for (chain1, chain2)
+                LIS[chain1][chain2] = avg_score
+            else:
+                LIS[chain1][chain2] = 0.0  # No valid values
+        else:
+            LIS[chain1][chain2]=0.0
+        
 
 # calculate ipTM/ipSAE with and without PAE cutoff
 
@@ -601,8 +715,8 @@ for chain1 in unique_chains:
         if chain1 >= chain2: continue
         chainpairs.add(chain1 + "-" + chain2)
 
-OUT.write("\nChn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model\n")
-PML.write("# Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn    n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model\n")
+OUT.write("\nChn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS       n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model\n")
+PML.write("# Chn1 Chn2  PAE Dist  Type   ipSAE    ipSAE_d0chn ipSAE_d0dom  ipTM_af  ipTM_d0chn     pDockQ     pDockQ2    LIS      n0res  n0chn  n0dom   d0res   d0chn   d0dom  nres1   nres2   dist1   dist2  Model\n")
 for pair in sorted(chainpairs):
     (chain_a, chain_b) = pair.split("-")
     pair1 = (chain_a, chain_b)
@@ -627,6 +741,9 @@ for pair in sorted(chainpairs):
             f'{ipsae_d0dom_asym[chain1][chain2]:8.6f}    '
             f'{iptm_af:5.3f}    '
             f'{iptm_d0chn_asym[chain1][chain2]:8.6f}    '
+            f'{pDockQ[chain1][chain2]:8.4f}   '
+            f'{pDockQ2[chain1][chain2]:8.4f}   '
+            f'{LIS[chain1][chain2]:8.4f}   '
             f'{int(n0res[chain1][chain2]):5d}  '
             f'{int(n0chn[chain1][chain2]):5d}  '
             f'{int(n0dom[chain1][chain2]):5d}  '
@@ -645,13 +762,22 @@ for pair in sorted(chainpairs):
             residues_2 = max(len(unique_residues_chain1[chain1][chain2]), len(unique_residues_chain2[chain2][chain1]))
             dist_residues_1 = max(len(dist_unique_residues_chain2[chain1][chain2]), len(dist_unique_residues_chain1[chain2][chain1]))
             dist_residues_2 = max(len(dist_unique_residues_chain1[chain1][chain2]), len(dist_unique_residues_chain2[chain2][chain1]))
+
+            if pDockQ2[chain1][chain2]>= pDockQ2[chain2][chain1]:
+                pDockQ2_value=pDockQ2[chain1][chain2]
+            else:
+                pDockQ2_value=pDockQ2[chain2][chain1]
             
+            LIS_Score=(LIS[chain1][chain2]+LIS[chain2][chain1])/2.0
             outstring=f'{chain2}    {chain1}     {pae_string:3}  {dist_string:3}  {"max":5} ' + (
                 f'{ipsae_d0res_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0chn_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0dom_max[chain1][chain2]:8.6f}    '
                 f'{iptm_af:5.3f}    '
                 f'{iptm_d0chn_max[chain1][chain2]:8.6f}    '
+                f'{pDockQ[chain1][chain2]:8.4f}   '
+                f'{pDockQ2_value:8.4f}   '
+                f'{LIS_Score:8.4f}   '
                 f'{int(n0res_max[chain1][chain2]):5d}  '
                 f'{int(n0chn[chain1][chain2]):5d}  '
                 f'{int(n0dom_max[chain1][chain2]):5d}  '
