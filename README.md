@@ -10,7 +10,7 @@ Simply download the Python script ipsae.py. It may be necessary to install the P
 AlphaFold2:
 
      python ipsae.py <path_to_json_file> <path_to_af2_pdb_file> <pae_cutoff> <dist_cutoff>   
-     python ipsae.py RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb 10 10
+     python ipsae.py RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb 15 15
 
 AlphaFold3:
 
