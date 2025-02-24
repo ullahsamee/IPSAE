@@ -301,7 +301,7 @@ if af3:
     # Create a composite key for residue and chain: e.g. 1A, 2A, 3A,...
     token_chain_ids = np.array(data['token_chain_ids'])
     token_res_ids =   np.array(data['token_res_ids'])
-    composite_key =   np.core.defchararray.add(token_res_ids.astype(str), token_chain_ids)
+    composite_key = np.char.add(token_res_ids.astype(str), token_chain_ids) 
     
     # Detect changes including the first element
     changes = np.concatenate(([True], composite_key[1:] != composite_key[:-1]))
