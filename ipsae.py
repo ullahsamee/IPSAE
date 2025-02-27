@@ -333,6 +333,7 @@ if af3:
     json_summary_file_path=None
     if os.path.exists(json_summary_file_path1): json_summary_file_path=json_summary_file_path1    # for local AF3 installation
     elif os.path.exists(json_summary_file_path2): json_summary_file_path=json_summary_file_path2  # for AF3 server files
+
     if json_summary_file_path is not None:
         with open(json_summary_file_path,'r') as file:
             data_summary=json.load(file)
