@@ -9,17 +9,17 @@ Simply download the Python script ipsae.py. It may be necessary to install the P
 # Usage:                                                                                                                                                                                                     
 AlphaFold2:
 
-     python ipsae.py <path_to_json_file> <path_to_af2_pdb_file> <pae_cutoff> <dist_cutoff>   
+     python ipsae.py <path_to_af2_json_file> <path_to_af2_pdb_file> <pae_cutoff> <dist_cutoff>   
      python ipsae.py RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb 15 15
 
 AlphaFold3:
 
-     python ipsae.py <path_to_json_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff>                    
+     python ipsae.py <path_to_af3_json_file> <path_to_af3_cif_file> <pae_cutoff> <dist_cutoff>                    
      python ipsae.py fold_aurka_tpx2_full_data_0.json fold_aurka_tpx2_model_0.cif 10 10
 
 Boltz1:
 
-     python ipsae.py <path_to_pae_npz_file> <path_to_mmcif_file> <pae_cutoff> <dist_cutoff>
+     python ipsae.py <path_to_boltz1_pae_npz_file> <path_to_boltz1_cif_file> <pae_cutoff> <dist_cutoff>
      python ipsae.py pae_AURKA_TPX2_model_0.npz  AURKA_TPX2_model_0.cif 10 10
 
 
