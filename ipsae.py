@@ -567,7 +567,6 @@ for chain1 in unique_chains:
             mean_plddt= cb_plddt[ list(pDockQ_unique_residues[chain1][chain2])].mean()
             x=mean_plddt*math.log10(npairs)
             pDockQ[chain1][chain2]= 0.724 / (1 + math.exp(-0.052*(x-152.611)))+0.018
-            print("pDockQ",chain1, chain2, nres, npairs, mean_plddt, pDockQ[chain1][chain2])
         else:
             mean_plddt=0.0
             x=0.0
@@ -598,7 +597,6 @@ for chain1 in unique_chains:
             mean_ptm = sum/npairs
             x=mean_plddt*mean_ptm
             pDockQ2[chain1][chain2]= 1.31 / (1 + math.exp(-0.075*(x-84.733)))+0.005
-            print("pDockQ2",chain1, chain2, nres, npairs, mean_plddt, mean_ptm, pDockQ2[chain1][chain2])
         else:
             mean_plddt=0.0
             x=0.0
