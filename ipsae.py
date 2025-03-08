@@ -18,12 +18,12 @@
 
 # Usage:
 
-#  python ipsae.py <path_to_json_file> <path_to_af2_pdb_file>  <pae_cutoff> <dist_cutoff>
-#  python ipsae.py <path_to_json_file> <path_to_af3_cif_file>  <pae_cutoff> <dist_cutoff>
+#  python ipsae.py <path_to_af2_pae_file>     <path_to_af2_pdb_file>     <pae_cutoff> <dist_cutoff>
+#  python ipsae.py <path_to_af3_pae_file>     <path_to_af3_cif_file>     <pae_cutoff> <dist_cutoff>
+#  python ipsae.py <path_to_boltz1_pae_file>  <path_to_boltz1_cif_file>  <pae_cutoff> <dist_cutoff>
 #
 # All output files will be in same path/folder as cif or pdb file
 
-import itertools
 import sys, os, math
 import json
 import numpy as np
@@ -35,15 +35,19 @@ np.set_printoptions(threshold=np.inf)  # for printing out full numpy arrays for 
 # Ensure correct usage
 if len(sys.argv) < 5:
     print("Usage for AF2:")
-    print("   python ipsae.py <path_to_json_file> <path_to_pdb_file> <pae_cutoff> <dist_cutoff>")
-    print("   Example: python ipsae.py RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb 10 10")
+    print("   python ipsae.py <path_to_pae_json_file> <path_to_pdb_file> <pae_cutoff> <dist_cutoff>")
+    print("   python ipsae.py RAF1_KSR1_scores_rank_001_alphafold2_multimer_v3_model_4_seed_003.json RAF1_KSR1_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_003.pdb 10 10")
     print("")
     print("Usage for AF3:")
-    print("python ipsae.py <path_to_json_file> <path_to_pdb_file> <pae_cutoff> <dist_cutoff>")
-    print("   Example: python ipsae.py fold_aurka_tpx2_full_data_0.json  fold_aurka_tpx2_model_0.cif 10 10")
+    print("   python ipsae.py <path_to_pae_json_file> <path_to_mmcif_file> <pae_cutoff> <dist_cutoff>")
+    print("   python ipsae.py fold_aurka_tpx2_full_data_0.json  fold_aurka_tpx2_model_0.cif 10 10")
+    print("")
+    print("Usage for Boltz1:")
+    print("   python ipsae.py <path_to_pae_npz_file> <path_to_mmcif_file> <pae_cutoff> <dist_cutoff>")
+    print("   python ipsae.py pae_AURKA_TPX2_model_0.npz  AURKA_TPX2_model_0.cif 10 10")
     sys.exit(1)
 
-json_file_path =   sys.argv[1]
+pae_file_path =    sys.argv[1]
 pdb_path =         sys.argv[2]
 pae_cutoff =       float(sys.argv[3])
 dist_cutoff =      float(sys.argv[4])
@@ -52,19 +56,32 @@ if pae_cutoff<10:  pae_string="0"+pae_string
 dist_string =      str(int(dist_cutoff))
 if dist_cutoff<10: dist_string="0"+dist_string
 
+#pae_AURKA_TPX2_model_0.npz
+
 if ".pdb" in pdb_path:
     pdb_stem=pdb_path.replace(".pdb","")
     path_stem =     f'{pdb_path.replace(".pdb","")}_{pae_string}_{dist_string}'
-    af2 = True
-    af3 = False
-elif ".cif" in pdb_path:
+    af2 =    True
+    af3 =    False
+    boltz1 = False
+    cif =    False
+elif ".cif" in pdb_path and pae_file_path.endswith(".json"):
     pdb_stem=pdb_path.replace(".cif","")
     path_stem =     f'{pdb_path.replace(".cif","")}_{pae_string}_{dist_string}'
-    af2 = False
-    af3 = True
+    af2 =    False
+    af3 =    True
+    boltz1 = False
+    cif =    True
+elif ".cif" in pdb_path and pae_file_path.endswith(".npz"):
+    pdb_stem=pdb_path.replace(".cif","")
+    path_stem =     f'{pdb_path.replace(".cif","")}_{pae_string}_{dist_string}'
+    af2 =    False
+    af3 =    False
+    boltz1 = True
+    cif =    True
 else:
-    print("Wrong PDB file type ", pdb_path)
-    exit()
+    print("Wrong PDB or PAE file type ", pdb_path)
+    sys.exit()
     
 file_path =        path_stem + ".txt"
 file2_path =       path_stem + "_byres.txt"
@@ -127,36 +144,76 @@ def parse_pdb_atom_line(line):
         'z': z
     }
 
-def parse_cif_atom_line(line):
-    # for parsing AF3 mmCIF files
+def parse_cif_atom_line(line,fielddict):
+    # for parsing AF3 and Boltz1 mmCIF files
     # ligands do not have residue numbers but modified residues do. Return "None" for ligand.
-    # 0      1   2  3     4  5  6 7  8  9  10      11     12      13   14    15 16 17
-    #ATOM   1294 N  N     . ARG A 1 159 ? 5.141   -14.096 10.526  1.00 95.62 159 A 1
-    #ATOM   1295 C  CA    . ARG A 1 159 ? 4.186   -13.376 11.366  1.00 96.27 159 A 1
-    #ATOM   1296 C  C     . ARG A 1 159 ? 2.976   -14.235 11.697  1.00 96.42 159 A 1
-    #ATOM   1297 O  O     . ARG A 1 159 ? 2.654   -15.174 10.969  1.00 95.46 159 A 1
+    # AF3 mmcif lines
+    # 0      1   2   3     4  5  6 7  8  9  10      11     12      13   14    15 16 17
+    #ATOM   1294 N   N     . ARG A 1 159 ? 5.141   -14.096 10.526  1.00 95.62 159 A 1
+    #ATOM   1295 C   CA    . ARG A 1 159 ? 4.186   -13.376 11.366  1.00 96.27 159 A 1
+    #ATOM   1296 C   C     . ARG A 1 159 ? 2.976   -14.235 11.697  1.00 96.42 159 A 1
+    #ATOM   1297 O   O     . ARG A 1 159 ? 2.654   -15.174 10.969  1.00 95.46 159 A 1
     # ...
-    #HETATM 1305 N  N     . TPO A 1 160 ? 2.328   -13.853 12.742  1.00 96.42 160 A 1
-    #HETATM 1306 C  CA    . TPO A 1 160 ? 1.081   -14.560 13.218  1.00 96.78 160 A 1
-    #HETATM 1307 C  C     . TPO A 1 160 ? -2.115  -11.668 12.263  1.00 96.19 160 A 1
-    #HETATM 1308 O  O     . TPO A 1 160 ? -1.790  -11.556 11.113  1.00 95.75 160 A 1
+    #HETATM 1305 N   N     . TPO A 1 160 ? 2.328   -13.853 12.742  1.00 96.42 160 A 1
+    #HETATM 1306 C   CA    . TPO A 1 160 ? 1.081   -14.560 13.218  1.00 96.78 160 A 1
+    #HETATM 1307 C   C     . TPO A 1 160 ? -2.115  -11.668 12.263  1.00 96.19 160 A 1
+    #HETATM 1308 O   O     . TPO A 1 160 ? -1.790  -11.556 11.113  1.00 95.75 160 A 1
     # ...
-    #HETATM 2608 P  PG    . ATP C 3 .   ? -6.858  4.182   10.275  1.00 84.94 1   C 1 
-    #HETATM 2609 O  O1G   . ATP C 3 .   ? -6.178  5.238   11.074  1.00 75.56 1   C 1 
-    #HETATM 2610 O  O2G   . ATP C 3 .   ? -5.889  3.166   9.748   1.00 75.15 1   C 1 
+    #HETATM 2608 P   PG    . ATP C 3 .   ? -6.858  4.182   10.275  1.00 84.94 1   C 1 
+    #HETATM 2609 O   O1G   . ATP C 3 .   ? -6.178  5.238   11.074  1.00 75.56 1   C 1 
+    #HETATM 2610 O   O2G   . ATP C 3 .   ? -5.889  3.166   9.748   1.00 75.15 1   C 1 
     # ...
-    #HETATM 2639 MG MG    . MG  D 4 .   ? -7.262  2.709   4.825   1.00 91.47 1   D 1 
-    #HETATM 2640 MG MG    . MG  E 5 .   ? -4.994  2.251   8.755   1.00 85.96 1   E 1 
+    #HETATM 2639 MG  MG    . MG  D 4 .   ? -7.262  2.709   4.825   1.00 91.47 1   D 1 
+    #HETATM 2640 MG  MG    . MG  E 5 .   ? -4.994  2.251   8.755   1.00 85.96 1   E 1 
 
+
+    # Boltz1 mmcif files (in non-standard order))
+    #_atom_site.group_PDB
+    #_atom_site.id
+    #_atom_site.type_symbol
+    #_atom_site.label_atom_id
+    #_atom_site.label_alt_id
+    #_atom_site.label_comp_id
+    #_atom_site.label_seq_id
+    #_atom_site.auth_seq_id
+    #_atom_site.pdbx_PDB_ins_code
+    #_atom_site.label_asym_id
+    #_atom_site.Cartn_x
+    #_atom_site.Cartn_y
+    #_atom_site.Cartn_z
+    #_atom_site.occupancy
+    #_atom_site.label_entity_id
+    #_atom_site.auth_asym_id
+    #_atom_site.auth_comp_id
+    #_atom_site.B_iso_or_equiv
+    #_atom_site.pdbx_PDB_model_num
+    # 0     1     2  3     4   5   6    7   8  9  10          11         12       13  14 15 16  17 18
+    #ATOM   2652  N  N     . ASN  43   43   ?  B  10.83538   6.06359    18.45139   1  2  B  ASN  1  1
+    #ATOM   2653  C  CA    . ASN  43   43   ?  B  10.76295   5.07366    19.53232   1  2  B  ASN  1  1
+    #ATOM   2654  C  C     . ASN  43   43   ?  B  11.21770   5.64437    20.88774   1  2  B  ASN  1  1
+    #ATOM   2655  O  O     . ASN  43   43   ?  B  12.06730   6.51688    20.91168   1  2  B  ASN  1  1
+    #ATOM   2656  C  CB    . ASN  43   43   ?  B  11.60137   3.84778    19.19481   1  2  B  ASN  1  1
+    #ATOM   2657  C  CG    . ASN  43   43   ?  B  10.96208   3.03997    18.07013   1  2  B  ASN  1  1
+    #ATOM   2658  O  OD1   . ASN  43   43   ?  B  9.79094    3.17033    17.81165   1  2  B  ASN  1  1
+    #ATOM   2659  N  ND2   . ASN  43   43   ?  B  11.77101   2.23791    17.39764   1  2  B  ASN  1  1
+    #HETATM 2660  P  PG    . ATP  .    1    ?  C  -8.79525   6.04621    -4.99212   1  3  C  ATP  1  1
+    #HETATM 2661  O  O1G   . ATP  .    1    ?  C  -10.01901  6.83468    -5.24825   1  3  C  ATP  1  1
+    #HETATM 2662  O  O2G   . ATP  .    1    ?  C  -9.03047   4.56941    -4.85246   1  3  C  ATP  1  1
+    #HETATM 2663  O  O3G   . ATP  .    1    ?  C  -7.97335   6.60305    -3.86656   1  3  C  ATP  1  1
+    #HETATM 2664  P  PB    . ATP  .    1    ?  C  -6.63618   7.04315    -6.56073   1  3  C  ATP  1  1
+    #HETATM 2665  O  O1B   . ATP  .    1    ?  C  -7.04640   8.36577    -7.14326   1  3  C  ATP  1  1
+    #HETATM 2666  O  O2B   . ATP  .    1    ?  C  -5.79036   7.13926    -5.33995   1  3  C  ATP  1  1
+
+    
     linelist =        line.split()
-    atom_num =        linelist[1]
-    atom_name =       linelist[3]
-    residue_name =    linelist[5]
-    chain_id =        linelist[6]
-    residue_seq_num = linelist[8]
-    x =               linelist[10]
-    y =               linelist[11]
-    z =               linelist[12]
+    atom_num =        linelist[ fielddict['id'] ]
+    atom_name =       linelist[ fielddict['label_atom_id'] ]
+    residue_name =    linelist[ fielddict['label_comp_id'] ]
+    chain_id =        linelist[ fielddict['label_asym_id'] ]
+    residue_seq_num = linelist[ fielddict['label_seq_id'] ]
+    x =               linelist[ fielddict['Cartn_x'] ]
+    y =               linelist[ fielddict['Cartn_y'] ]
+    z =               linelist[ fielddict['Cartn_z'] ]
 
     if residue_seq_num == ".": return None   # ligand atom
 
@@ -218,15 +275,38 @@ def contiguous_ranges(numbers):
 residues = []
 cb_residues = []
 chains = []
+atomsitefield_num=0
+atomsitefield_dict={} # contains order of atom_site fields in mmCIF files; handles any mmCIF field order
+
+# For af3 and boltz1: need mask to identify CA atom tokens in plddt vector and pae matrix;
+# Skip ligand atom tokens and non-CA-atom tokens in PTMs (those not in residue_set)
+token_mask=list()     
+residue_set= {"ALA", "ARG", "ASN", "ASP", "CYS",
+              "GLN", "GLU", "GLY", "HIS", "ILE",
+              "LEU", "LYS", "MET", "PHE", "PRO",
+              "SER", "THR", "TRP", "TYR", "VAL"}
+
 with open(pdb_path, 'r') as PDB:
     for line in PDB:
+
+        if line.startswith("_atom_site."):
+            line=line.strip()
+            (atomsite,fieldname)=line.split(".")
+            atomsitefield_dict[fieldname]=atomsitefield_num
+            atomsitefield_num += 1
+            
         if line.startswith("ATOM") or line.startswith("HETATM"):
-            if af2:
-                atom=parse_pdb_atom_line(line)
+            if cif:
+                atom=parse_cif_atom_line(line, atomsitefield_dict)
             else:
-                atom=parse_cif_atom_line(line)
-            if atom is None: continue
+                atom=parse_pdb_atom_line(line)
+
+            if atom is None:  # ligand atom
+                token_mask.append(0)
+                continue
+
             if atom['atom_name'] == "CA":
+                token_mask.append(1)
                 residues.append({
                     'atom_num': atom['atom_num'],
                     'coor': np.array([atom['x'], atom['y'], atom['z']]),
@@ -234,9 +314,9 @@ with open(pdb_path, 'r') as PDB:
                     'chainid': atom['chain_id'],
                     'resnum': atom['residue_seq_num'],
                     'residue': f"{atom['residue_name']:3}   {atom['chain_id']:3} {atom['residue_seq_num']:4}"
-                    
                 })
                 chains.append(atom['chain_id'])
+
             if atom['atom_name'] == "CB" or (atom['residue_name']=="GLY" and atom['atom_name']=="CA"):
                 cb_residues.append({
                     'atom_num': atom['atom_num'],
@@ -245,9 +325,12 @@ with open(pdb_path, 'r') as PDB:
                     'chainid': atom['chain_id'],
                     'resnum': atom['residue_seq_num'],
                     'residue': f"{atom['residue_name']:3}   {atom['chain_id']:3} {atom['residue_seq_num']:4}"
-                    
                 })
 
+            # add nucleic acids and non-CA atoms in PTM residues to tokens (as 0), whether labeled as "HETATM" (af3) or as "ATOM" (boltz1)
+            if atom['atom_name'] != "CA" and atom['residue_name'] not in residue_set:
+                token_mask.append(0)
+                
 # Convert structure information to numpy arrays
 numres = len(residues)
 CA_atom_num=  np.array([res['atom_num']-1 for res in residues])  # for AF3 atom indexing from 0
@@ -255,36 +338,86 @@ CB_atom_num=  np.array([res['atom_num']-1 for res in cb_residues])  # for AF3 at
 coordinates = np.array([res['coor']       for res in cb_residues])
 chains = np.array(chains)
 unique_chains = np.unique(chains)
+token_array=np.array(token_mask)
+ntokens=np.sum(token_array)
 
 # Calculate distance matrix using NumPy broadcasting
 distances = np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :])**2).sum(axis=2))
 
-# Load AF2 or AF3 json data and extract plddt and pae_matrix (and ptm_matrix if available)
-with open(json_file_path, 'r') as file:
-    data = json.load(file)
-
-
-ptm_matrix_af2=np.zeros((numres,numres))
-ptm_matrix_af3=np.zeros((numres,numres))
+# Load AF2, AF3, or BOLTZ1 data and extract plddt and pae_matrix (and ptm_matrix if available)
 if af2:
-    iptm_af2 = float(data['iptm'])
-    ptm_af2  = float(data['ptm'])
-    plddt =      np.array(data['plddt'])
-    cb_plddt =   np.array(data['plddt'])  # for pDockQ
-    pae_matrix = np.array(data['pae'])
-    # internal version of Colabfold/AF2 prints out ptm_matrix in json files
-    if 'ptm_matrix' in data:
-        ptm_matrix_af2 = np.array(data['ptm_matrix'])
-        have_ptm_matrix_af2=1
+    if os.path.exists(pae_file_path):
+        with open(pae_file_path, 'r') as file:
+            data = json.load(file)
+        iptm_af2 =   float(data['iptm'])
+        ptm_af2  =   float(data['ptm'])
+        plddt =      np.array(data['plddt'])
+        cb_plddt =   np.array(data['plddt'])  # for pDockQ
+        pae_matrix = np.array(data['pae'])
     else:
-        have_ptm_matrix_af2=0
+        print("AF2 PAE file does not exist: ", pae_file_path)
+        sys.exit()
+        
+if boltz1:
+    # Boltz1 filenames:
+    # AURKA_TPX2_model_0.cif
+    # confidence_AURKA_TPX2_model_0.json
+    # pae_AURKA_TPX2_model_0.npz
+    # plddt_AURKA_TPX2_model_0.npz
+    
+
+    plddt_file_path=pae_file_path.replace("pae","plddt")
+    if os.path.exists(plddt_file_path):
+        data_plddt=np.load(plddt_file_path)
+        plddt_boltz1=np.array(100.0*data_plddt['plddt'])
+        plddt =    plddt_boltz1[np.ix_(token_array.astype(bool))]
+        cb_plddt = plddt_boltz1[np.ix_(token_array.astype(bool))]
+    else:
+        plddt = np.zeros(ntokens)
+        cb_plddt = np.zeros(ntokens)
+        
+    if os.path.exists(pae_file_path):
+        data_pae = np.load(pae_file_path)
+        pae_matrix_boltz1=np.array(data_pae['pae'])
+        pae_matrix = pae_matrix_boltz1[np.ix_(token_array.astype(bool), token_array.astype(bool))]
+
+    else:
+        print("Boltz1 PAE file does not exist: ", pae_file_path)
+        sys.exit()
+    
+    summary_file_path=pae_file_path.replace("pae","confidence")
+    summary_file_path=summary_file_path.replace(".npz",".json")
+    iptm_boltz1=   {chain1: {chain2: 0     for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+    if os.path.exists(summary_file_path):
+        with open(summary_file_path, 'r') as file:
+            data_summary = json.load(file)
+
+            boltz1_chain_pair_iptm_data=data_summary['pair_chains_iptm']
+            for chain1 in unique_chains:
+                nchain1=  ord(chain1) - ord('A')  # map A,B,C... to 0,1,2...
+                for chain2 in unique_chains:
+                    if chain1 == chain2: continue
+                    nchain2=ord(chain2) - ord('A')
+                    iptm_boltz1[chain1][chain2]=boltz1_chain_pair_iptm_data[str(nchain1)][str(nchain2)]
+    else:
+        print("Boltz1 summary file does not exist: ", summary_file_path)
 
 if af3:
     # Example Alphafold3 server filenames
     #   fold_aurka_0_tpx2_0_full_data_0.json
     #   fold_aurka_0_tpx2_0_summary_confidences_0.json
     #   fold_aurka_0_tpx2_0_model_0.cif
-    
+    # Example AlphaFold3 downloadable code filenames
+    #   confidences.json
+    #   summary_confidences.json
+    #   model1.cif
+    if os.path.exists(pae_file_path):
+        with open(pae_file_path, 'r') as file:
+            data = json.load(file)
+    else:
+        print("AF3 PAE file does not exist: ", pae_file_path)
+        sys.exit()
+
     atom_plddts=np.array(data['atom_plddts'])
     plddt=atom_plddts[CA_atom_num]  # pull out residue plddts from Calpha atoms
     cb_plddt=atom_plddts[CB_atom_num]  # pull out residue plddts from Cbeta atoms for pDockQ
@@ -296,46 +429,23 @@ if af3:
         pae_matrix_af3 = np.array(data['pae'])
     else:
         print("no PAE data in AF3 json file; quitting")
-        exit()
+        sys.exit()
     
-    # Create a composite key for residue and chain: e.g. 1A, 2A, 3A,...
-    token_chain_ids = np.array(data['token_chain_ids'])
-    token_res_ids =   np.array(data['token_res_ids'])
-    composite_key =   np.char.add(token_res_ids.astype(str), token_chain_ids)
-    
-    # Detect changes including the first element
-    changes = np.concatenate(([True], composite_key[1:] != composite_key[:-1]))
-
-    # Initialize the mask array as zeroes; mask will be used to pick out PAEs from pae_matrix_af3 for each pair of protein residues
-    mask = np.zeros_like(token_res_ids)
-
-    # Set mask to 1 at each new composite key
-    mask[changes] = 1
-
-    # Loop to handle the second occurrence within the same chain
-    for i in range(1, len(composite_key)):
-        if token_chain_ids[i] not in unique_chains:  # set ligands to 0
-            mask[i]=0
-            continue
-        if composite_key[i] == composite_key[i - 1]:
-            mask[i] = 0  # Set all repeats to 0
-            if composite_key[i] == composite_key[i - 1] and composite_key[i] != composite_key[i - 2]:
-                mask[i] = 1  # Set the second occurrence to 1 (CA atom in modified amino acid) and the first occurrence to 0 (N atom)
-                mask[i-1] = 0
-
     # Set pae_matrix for AF3 from subset of full PAE matrix from json file
-    pae_matrix = pae_matrix_af3[np.ix_(mask.astype(bool), mask.astype(bool))]
+    token_array=np.array(token_mask)
+    pae_matrix = pae_matrix_af3[np.ix_(token_array.astype(bool), token_array.astype(bool))]
 
     # Get iptm matrix from AF3 summary_confidences file
     iptm_af3=   {chain1: {chain2: 0     for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-    json_summary_file_path = None
-    if "confidences" in json_file_path:
-        json_summary_file_path = json_file_path.replace("confidences", "summary_confidences")
-    elif "full_data" in json_file_path:
-        json_summary_file_path = json_file_path.replace("full_data", "summary_confidences")
 
-    if json_summary_file_path is not None:
-        with open(json_summary_file_path,'r') as file:
+    summary_file_path = None
+    if "confidences" in pae_file_path:
+        summary_file_path = pae_file_path.replace("confidences", "summary_confidences")
+    elif "full_data" in pae_file_path:
+        summary_file_path = pae_file_path.replace("full_data", "summary_confidences")
+
+    if summary_file_path is not None and os.path.exists(summary_file_path):
+        with open(summary_file_path,'r') as file:
             data_summary=json.load(file)
         af3_chain_pair_iptm_data=data_summary['chain_pair_iptm']
         for chain1 in unique_chains:
@@ -344,6 +454,8 @@ if af3:
                 if chain1 == chain2: continue
                 nchain2=ord(chain2) - ord('A')
                 iptm_af3[chain1][chain2]=af3_chain_pair_iptm_data[nchain1][nchain2]
+    else:
+        print("AF3 summary file does not exist: ", summary_file_path)
 
 
 # Compute chain-pair-specific interchain PTM and PAE, count valid pairs, and count unique residues
@@ -365,67 +477,74 @@ if af3:
 # n0chn = number of residues in chain pair = len(chain1) + len(chain2)
 # n0dom = number of residues in chain pair that have good PAE values (<cutoff)
 # n0res = number of residues in chain2 that have good PAE residues for each residue of chain1
-iptm_d0chn_byres =         {chain1: {chain2: np.zeros(numres) for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0chn_byres =        {chain1: {chain2: np.zeros(numres) for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0dom_byres =        {chain1: {chain2: np.zeros(numres) for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0res_byres =        {chain1: {chain2: np.zeros(numres) for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
 
-iptm_d0chn_asym  =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0chn_asym  =        {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0dom_asym  =        {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0res_asym  =        {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+# Initializes a nested dictionary with all values set to 0
+def init_chainpairdict_zeros(chainlist):
+    return {chain1: {chain2: 0 for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
 
-iptm_d0chn_max   =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0chn_max   =        {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0dom_max   =        {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0res_max   =        {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+# Initializes a nested dictionary with NumPy arrays of zeros of a specified size
+def init_chainpairdict_npzeros(chainlist, arraysize):
+    return {chain1: {chain2: np.zeros(arraysize) for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
 
-iptm_d0chn_asymres  =      {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0chn_asymres  =     {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0dom_asymres  =     {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0res_asymres  =     {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+# Initializes a nested dictionary with empty sets.
+def init_chainpairdict_set(chainlist):
+    return {chain1: {chain2: set() for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
 
-iptm_d0chn_maxres   =      {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0chn_maxres   =     {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0dom_maxres   =     {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-ipsae_d0res_maxres   =     {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+iptm_d0chn_byres  = init_chainpairdict_npzeros(unique_chains, numres)
+ipsae_d0chn_byres = init_chainpairdict_npzeros(unique_chains, numres)
+ipsae_d0dom_byres = init_chainpairdict_npzeros(unique_chains, numres)
+ipsae_d0res_byres = init_chainpairdict_npzeros(unique_chains, numres)
 
-n0chn                 =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-n0dom                 =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-n0dom_max             =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-n0res                 =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-n0res_max             =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-n0res_byres           =       {chain1: {chain2: np.zeros(numres) for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+iptm_d0chn_asym   = init_chainpairdict_zeros(unique_chains)
+ipsae_d0chn_asym  = init_chainpairdict_zeros(unique_chains)
+ipsae_d0dom_asym  = init_chainpairdict_zeros(unique_chains)
+ipsae_d0res_asym  = init_chainpairdict_zeros(unique_chains)
 
-d0chn                 =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-d0dom                 =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-d0dom_max             =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-d0res                 =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-d0res_max             =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-d0res_byres           =       {chain1: {chain2: np.zeros(numres) for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+iptm_d0chn_max    = init_chainpairdict_zeros(unique_chains)
+ipsae_d0chn_max   = init_chainpairdict_zeros(unique_chains)
+ipsae_d0dom_max   = init_chainpairdict_zeros(unique_chains)
+ipsae_d0res_max   = init_chainpairdict_zeros(unique_chains)
 
-valid_pair_counts      =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-dist_valid_pair_counts =       {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-unique_residues_chain1 =       {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-unique_residues_chain2 =       {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-dist_unique_residues_chain1 =  {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-dist_unique_residues_chain2 =  {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-pDockQ_unique_residues      =  {chain1: {chain2: set()            for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+iptm_d0chn_asymres   = init_chainpairdict_zeros(unique_chains)
+ipsae_d0chn_asymres  = init_chainpairdict_zeros(unique_chains)
+ipsae_d0dom_asymres  = init_chainpairdict_zeros(unique_chains)
+ipsae_d0res_asymres  = init_chainpairdict_zeros(unique_chains)
 
-pDockQ               =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-pDockQ2              =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
-LIS                  =         {chain1: {chain2: 0                for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
+iptm_d0chn_maxres    = init_chainpairdict_zeros(unique_chains)
+ipsae_d0chn_maxres   = init_chainpairdict_zeros(unique_chains)
+ipsae_d0dom_maxres   = init_chainpairdict_zeros(unique_chains)
+ipsae_d0res_maxres   = init_chainpairdict_zeros(unique_chains)
+
+n0chn       = init_chainpairdict_zeros(unique_chains)
+n0dom       = init_chainpairdict_zeros(unique_chains)
+n0dom_max   = init_chainpairdict_zeros(unique_chains)
+n0res       = init_chainpairdict_zeros(unique_chains)
+n0res_max   = init_chainpairdict_zeros(unique_chains)
+n0res_byres = init_chainpairdict_npzeros(unique_chains, numres)
+
+d0chn       = init_chainpairdict_zeros(unique_chains)
+d0dom       = init_chainpairdict_zeros(unique_chains)
+d0dom_max   = init_chainpairdict_zeros(unique_chains)
+d0res       = init_chainpairdict_zeros(unique_chains)
+d0res_max   = init_chainpairdict_zeros(unique_chains)
+d0res_byres = init_chainpairdict_npzeros(unique_chains, numres)
+
+valid_pair_counts           = init_chainpairdict_zeros(unique_chains)
+dist_valid_pair_counts      = init_chainpairdict_zeros(unique_chains)
+unique_residues_chain1      = init_chainpairdict_set(unique_chains)
+unique_residues_chain2      = init_chainpairdict_set(unique_chains)
+dist_unique_residues_chain1 = init_chainpairdict_set(unique_chains)
+dist_unique_residues_chain2 = init_chainpairdict_set(unique_chains)
+pDockQ_unique_residues      = init_chainpairdict_set(unique_chains)
+
+pDockQ  = init_chainpairdict_zeros(unique_chains)
+pDockQ2 = init_chainpairdict_zeros(unique_chains)
+LIS     = init_chainpairdict_zeros(unique_chains)
 
 
 # pDockQ
 pDockQ_cutoff=8.0
-x0=152.611
-L=0.724
-k=0.052
-b=0.018
 
-
-# pDockQ
 for chain1 in unique_chains:
     for chain2 in unique_chains:
         if chain1 == chain2:
@@ -444,10 +563,11 @@ for chain1 in unique_chains:
                     pDockQ_unique_residues[chain1][chain2].add(residue)
                     
         if npairs>0:
+            nres=len(list(pDockQ_unique_residues[chain1][chain2]))
             mean_plddt= cb_plddt[ list(pDockQ_unique_residues[chain1][chain2])].mean()
             x=mean_plddt*math.log10(npairs)
             pDockQ[chain1][chain2]= 0.724 / (1 + math.exp(-0.052*(x-152.611)))+0.018
-            nres=len(list(pDockQ_unique_residues[chain1][chain2]))
+            print("pDockQ",chain1, chain2, nres, npairs, mean_plddt, pDockQ[chain1][chain2])
         else:
             mean_plddt=0.0
             x=0.0
@@ -455,14 +575,7 @@ for chain1 in unique_chains:
             nres=0
         
 # pDockQ2
-pDockQ_cutoff=8.0
-x0=84.733
-L=1.31
-k=0.075
-b=0.005
 
-
-# pDockQ2
 for chain1 in unique_chains:
     for chain2 in unique_chains:
         if chain1 == chain2:
@@ -480,11 +593,12 @@ for chain1 in unique_chains:
                 sum += pae_list_ptm.sum()
             
         if npairs>0:
+            nres=len(list(pDockQ_unique_residues[chain1][chain2]))
             mean_plddt= cb_plddt[ list(pDockQ_unique_residues[chain1][chain2])].mean()
             mean_ptm = sum/npairs
             x=mean_plddt*mean_ptm
             pDockQ2[chain1][chain2]= 1.31 / (1 + math.exp(-0.075*(x-84.733)))+0.005
-            nres=len(list(pDockQ_unique_residues[chain1][chain2]))
+            print("pDockQ2",chain1, chain2, nres, npairs, mean_plddt, mean_ptm, pDockQ2[chain1][chain2])
         else:
             mean_plddt=0.0
             x=0.0
@@ -555,14 +669,6 @@ for chain1 in unique_chains:
                 for j in np.where(valid_pairs)[0]:
                     jresnum=residues[j]['resnum']
                     dist_unique_residues_chain2[chain1][chain2].add(jresnum)
-
-# for comparison of ptm matrix from af2 and ptm matrix from PAE values
-# for i in range(numres):
-#     for j in range(numres):
-#         if chains[i]>=chains[j]: continue
-#         print(i+1,j+1,chains[i],chains[j],ptm_matrix_af2[i,j],ptm_matrix_d0chn[i,j])
-        
-# calculate interchain by_residue values: pTM(i) or psAE(i)
 
 OUT2.write("i   AlignChn ScoredChain  AlignResNum  AlignResType  AlignRespLDDT      n0chn  n0dom  n0res    d0chn     d0dom     d0res   ipTM_pae  ipSAE_d0chn ipSAE_d0dom    ipSAE \n")
 for chain1 in unique_chains:
@@ -645,70 +751,59 @@ for chain1 in unique_chains:
 
         # pick maximum value for each chain pair for each iptm/ipsae type
         if chain1 > chain2:
-            if iptm_d0chn_asym[chain1][chain2] >= iptm_d0chn_asym[chain2][chain1]:
-                iptm_d0chn_max[chain1][chain2]=iptm_d0chn_asym[chain1][chain2]
-                iptm_d0chn_maxres[chain1][chain2]=iptm_d0chn_asymres[chain1][chain2]
-                iptm_d0chn_max[chain2][chain1]=iptm_d0chn_asym[chain1][chain2]
-                iptm_d0chn_maxres[chain2][chain1]=iptm_d0chn_asymres[chain1][chain2]
+            maxvalue=max(iptm_d0chn_asym[chain1][chain2], iptm_d0chn_asym[chain2][chain1])
+            if maxvalue==iptm_d0chn_asym[chain1][chain2]: maxres=iptm_d0chn_asymres[chain1][chain2]
+            else: maxres=iptm_d0chn_asymres[chain2][chain1]
+            iptm_d0chn_max[chain1][chain2]=maxvalue
+            iptm_d0chn_maxres[chain1][chain2]=maxres
+            iptm_d0chn_max[chain2][chain1]=maxvalue
+            iptm_d0chn_maxres[chain2][chain1]=maxres
+
+            maxvalue=max(ipsae_d0chn_asym[chain1][chain2], ipsae_d0chn_asym[chain2][chain1])
+            if maxvalue==ipsae_d0chn_asym[chain1][chain2]: maxres=ipsae_d0chn_asymres[chain1][chain2]
+            else: maxres=ipsae_d0chn_asymres[chain2][chain1]
+            ipsae_d0chn_max[chain1][chain2]=maxvalue
+            ipsae_d0chn_maxres[chain1][chain2]=maxres
+            ipsae_d0chn_max[chain2][chain1]=maxvalue
+            ipsae_d0chn_maxres[chain2][chain1]=maxres
+
+            maxvalue=max(ipsae_d0dom_asym[chain1][chain2], ipsae_d0dom_asym[chain2][chain1])
+            if maxvalue==ipsae_d0dom_asym[chain1][chain2]:
+                maxres=ipsae_d0dom_asymres[chain1][chain2]
+                maxn0=n0dom[chain1][chain2]
+                maxd0=d0dom[chain1][chain2]
             else:
-                iptm_d0chn_max[chain1][chain2]=iptm_d0chn_asym[chain2][chain1]
-                iptm_d0chn_maxres[chain1][chain2]=iptm_d0chn_asymres[chain2][chain1]
-                iptm_d0chn_max[chain2][chain1]=iptm_d0chn_asym[chain2][chain1]
-                iptm_d0chn_maxres[chain2][chain1]=iptm_d0chn_asymres[chain2][chain1]
+                maxres=ipsae_d0dom_asymres[chain2][chain1]
+                maxn0=n0dom[chain2][chain1]
+                maxd0=d0dom[chain2][chain1]
+            ipsae_d0dom_max[chain1][chain2]=maxvalue
+            ipsae_d0dom_maxres[chain1][chain2]=maxres
+            ipsae_d0dom_max[chain2][chain1]=maxvalue
+            ipsae_d0dom_maxres[chain2][chain1]=maxres
+            n0dom_max[chain1][chain2]=maxn0
+            n0dom_max[chain2][chain1]=maxn0
+            d0dom_max[chain1][chain2]=maxd0
+            d0dom_max[chain2][chain1]=maxd0
+
+            maxvalue=max(ipsae_d0res_asym[chain1][chain2], ipsae_d0res_asym[chain2][chain1])
+            if maxvalue==ipsae_d0res_asym[chain1][chain2]:
+                maxres=ipsae_d0res_asymres[chain1][chain2]
+                maxn0=n0res[chain1][chain2]
+                maxd0=d0res[chain1][chain2]
+            else:
+                maxres=ipsae_d0res_asymres[chain2][chain1]
+                maxn0=n0res[chain2][chain1]
+                maxd0=d0res[chain2][chain1]
+            ipsae_d0res_max[chain1][chain2]=maxvalue
+            ipsae_d0res_maxres[chain1][chain2]=maxres
+            ipsae_d0res_max[chain2][chain1]=maxvalue
+            ipsae_d0res_maxres[chain2][chain1]=maxres
+            n0res_max[chain1][chain2]=maxn0
+            n0res_max[chain2][chain1]=maxn0
+            d0res_max[chain1][chain2]=maxd0
+            d0res_max[chain2][chain1]=maxd0
 
                 
-            if ipsae_d0chn_asym[chain1][chain2] >= ipsae_d0chn_asym[chain2][chain1]:
-                ipsae_d0chn_max[chain1][chain2]=ipsae_d0chn_asym[chain1][chain2]
-                ipsae_d0chn_maxres[chain1][chain2]=ipsae_d0chn_asymres[chain1][chain2]
-                ipsae_d0chn_max[chain2][chain1]=ipsae_d0chn_asym[chain1][chain2]
-                ipsae_d0chn_maxres[chain2][chain1]=ipsae_d0chn_asymres[chain1][chain2]
-            else:
-                ipsae_d0chn_max[chain1][chain2]=ipsae_d0chn_asym[chain2][chain1]
-                ipsae_d0chn_maxres[chain1][chain2]=ipsae_d0chn_asymres[chain2][chain1]
-                ipsae_d0chn_max[chain2][chain1]=ipsae_d0chn_asym[chain2][chain1]
-                ipsae_d0chn_maxres[chain2][chain1]=ipsae_d0chn_asymres[chain2][chain1]
-
-                
-            if ipsae_d0dom_asym[chain1][chain2] >= ipsae_d0dom_asym[chain2][chain1]:
-                ipsae_d0dom_max[chain1][chain2]=ipsae_d0dom_asym[chain1][chain2]
-                ipsae_d0dom_maxres[chain1][chain2]=ipsae_d0dom_asymres[chain1][chain2]
-                ipsae_d0dom_max[chain2][chain1]=ipsae_d0dom_asym[chain1][chain2]
-                ipsae_d0dom_maxres[chain2][chain1]=ipsae_d0dom_asymres[chain1][chain2]
-                n0dom_max[chain1][chain2]=n0dom[chain1][chain2]
-                n0dom_max[chain2][chain1]=n0dom[chain1][chain2]
-                d0dom_max[chain1][chain2]=d0dom[chain1][chain2]
-                d0dom_max[chain2][chain1]=d0dom[chain1][chain2]
-            else:
-                ipsae_d0dom_max[chain1][chain2]=ipsae_d0dom_asym[chain2][chain1]
-                ipsae_d0dom_maxres[chain1][chain2]=ipsae_d0dom_asymres[chain2][chain1]
-                ipsae_d0dom_max[chain2][chain1]=ipsae_d0dom_asym[chain2][chain1]
-                ipsae_d0dom_maxres[chain2][chain1]=ipsae_d0dom_asymres[chain2][chain1]
-                n0dom_max[chain1][chain2]=n0dom[chain2][chain1]
-                n0dom_max[chain2][chain1]=n0dom[chain2][chain1]
-                d0dom_max[chain1][chain2]=d0dom[chain2][chain1]
-                d0dom_max[chain2][chain1]=d0dom[chain2][chain1]
-
-                
-            if ipsae_d0res_asym[chain1][chain2] >= ipsae_d0res_asym[chain2][chain1]:
-                ipsae_d0res_max[chain1][chain2]=ipsae_d0res_asym[chain1][chain2]
-                ipsae_d0res_maxres[chain1][chain2]=ipsae_d0res_asymres[chain1][chain2]
-                ipsae_d0res_max[chain2][chain1]=ipsae_d0res_asym[chain1][chain2]
-                ipsae_d0res_maxres[chain2][chain1]=ipsae_d0res_asymres[chain1][chain2]
-                n0res_max[chain1][chain2]=n0res[chain1][chain2]
-                n0res_max[chain2][chain1]=n0res[chain1][chain2]
-                d0res_max[chain1][chain2]=d0res[chain1][chain2]
-                d0res_max[chain2][chain1]=d0res[chain1][chain2]
-            else:
-                ipsae_d0res_max[chain1][chain2]=ipsae_d0res_asym[chain2][chain1]
-                ipsae_d0res_maxres[chain1][chain2]=ipsae_d0res_asymres[chain2][chain1]
-                ipsae_d0res_max[chain2][chain1]=ipsae_d0res_asym[chain2][chain1]
-                ipsae_d0res_maxres[chain2][chain1]=ipsae_d0res_asymres[chain2][chain1]
-                n0res_max[chain1][chain2]=n0res[chain2][chain1]
-                n0res_max[chain2][chain1]=n0res[chain2][chain1]
-                d0res_max[chain1][chain2]=d0res[chain2][chain1]
-                d0res_max[chain2][chain1]=d0res[chain2][chain1]
-                
-        
 chaincolor={'A':'magenta', 'B':'marine', 'C':'lime', 'D':'orange', 'E':'yellow', 'F':'cyan', 'G':'lightorange', 'H':'pink'}
 
 chainpairs=set()
@@ -736,6 +831,7 @@ for pair in sorted(chainpairs):
         dist_pairs = dist_valid_pair_counts[chain1][chain2]
         if af2: iptm_af = iptm_af2  # same for all chain pairs in entry
         if af3: iptm_af = iptm_af3[chain1][chain2]  # symmetric value for each chain pair
+        if boltz1: iptm_af=iptm_boltz1[chain1][chain2]
         
         outstring=f'{chain1}    {chain2}     {pae_string:3}  {dist_string:3}  {"asym":5} ' + (
             f'{ipsae_d0res_asym[chain1][chain2]:8.6f}    '
@@ -765,17 +861,18 @@ for pair in sorted(chainpairs):
             dist_residues_1 = max(len(dist_unique_residues_chain2[chain1][chain2]), len(dist_unique_residues_chain1[chain2][chain1]))
             dist_residues_2 = max(len(dist_unique_residues_chain1[chain1][chain2]), len(dist_unique_residues_chain2[chain2][chain1]))
 
-            if pDockQ2[chain1][chain2]>= pDockQ2[chain2][chain1]:
-                pDockQ2_value=pDockQ2[chain1][chain2]
-            else:
-                pDockQ2_value=pDockQ2[chain2][chain1]
-            
+            iptm_af_value=iptm_af
+            pDockQ2_value=max(pDockQ2[chain1][chain2], pDockQ2[chain2][chain1])
+            if boltz1:
+                iptm_af_value=max(iptm_boltz1[chain1][chain2], iptm_boltz1[chain2][chain1])
+
+
             LIS_Score=(LIS[chain1][chain2]+LIS[chain2][chain1])/2.0
             outstring=f'{chain2}    {chain1}     {pae_string:3}  {dist_string:3}  {"max":5} ' + (
                 f'{ipsae_d0res_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0chn_max[chain1][chain2]:8.6f}    '
                 f'{ipsae_d0dom_max[chain1][chain2]:8.6f}    '
-                f'{iptm_af:5.3f}    '
+                f'{iptm_af_value:5.3f}    '
                 f'{iptm_d0chn_max[chain1][chain2]:8.6f}    '
                 f'{pDockQ[chain1][chain2]:8.4f}   '
                 f'{pDockQ2_value:8.4f}   '
