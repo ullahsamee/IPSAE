@@ -9,9 +9,11 @@
 
 # Roland Dunbrack
 # Fox Chase Cancer Center
-# version 2
-# February 21, 2025
+# version 3
+# April 6, 2025
 # MIT license: script can be modified and redistributed for non-commercial and commercial use, as long as this information is reproduced.
+
+# includes support for Boltz1 structures and structures with nucleic acids
 
 # It may be necessary to install numpy with the following command:
 #      pip install numpy
@@ -392,17 +394,21 @@ for chain1 in unique_chains:
             chain_pair_type[chain1][chain2]='nucleic_acid'
         else:
             chain_pair_type[chain1][chain2]='protein'
-        print(chain1, chain2, chain_dict[chain1], chain_dict[chain2], chain_pair_type[chain1][chain2])
         
 # Calculate distance matrix using NumPy broadcasting
 distances = np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :])**2).sum(axis=2))
 
 # Load AF2, AF3, or BOLTZ1 data and extract plddt and pae_matrix (and ptm_matrix if available)
 if af2:
-    if os.path.exists(pae_file_path):
-        with open(pae_file_path, 'r') as file:
-            data = json.load(file)
+    
 
+    if os.path.exists(pae_file_path):
+        if pae_file_path.endswith('.pkl'):
+            data = np.load(pae_file_path, allow_pickle=True)
+        else:
+            with open(pae_file_path, 'r') as file:
+                data = json.load(file)
+                
         if 'iptm' in data: iptm_af2 =   float(data['iptm'])
         else: iptm_af2=-1.0
         if 'ptm' in data: ptm_af2  =   float(data['ptm'])
@@ -415,7 +421,11 @@ if af2:
             plddt = np.zeros(numres)
             cb_plddt = np.zeros(numres)
             
-        pae_matrix = np.array(data['pae'])
+        if 'pae' in data:
+            pae_matrix = np.array(data['pae'])
+        elif 'predicted_aligned_error' in data:
+            pae_matrix=np.array(data['predicted_aligned_error'])
+            
     else:
         print("AF2 PAE file does not exist: ", pae_file_path)
         sys.exit()
@@ -856,8 +866,8 @@ chaincolor={'A':'magenta',   'B':'marine',   'C':'lime',        'D':'orange',
             'I':'deepteal',  'J':'forest',   'K':'lightblue',   'L':'slate',
             'M':'violet',    'N':'arsenic',  'O':'iodine',      'P':'silver',
             'Q':'red',       'R':'sulfur',   'S':'purple',      'T':'olive',
-            'U':'palegreen', 'V':'gray90',   'W':'blue',        'X':'palecyan',
-            'Y':'yellow',    'Z':'white'}
+            'U':'palegreen', 'V':'green',    'W':'blue',        'X':'palecyan',
+            'Y':'limon',     'Z':'chocolate'}
 
 chainpairs=set()
 for chain1 in unique_chains:
@@ -956,5 +966,5 @@ for pair in sorted(chainpairs):
         chain_pair= f'color_{chain1}_{chain2}'
         chain1_residues = f'chain  {chain1} and resi {contiguous_ranges(unique_residues_chain1[chain1][chain2])}'
         chain2_residues = f'chain  {chain2} and resi {contiguous_ranges(unique_residues_chain2[chain1][chain2])}'
-        PML.write(f'alias {chain_pair}, color {color1}, {chain1_residues}; color {color2}, {chain2_residues}\n\n')
+        PML.write(f'alias {chain_pair}, color gray80, all; color {color1}, {chain1_residues}; color {color2}, {chain2_residues}\n\n')
     OUT.write("\n")
