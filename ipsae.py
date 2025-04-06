@@ -98,19 +98,24 @@ def ptm_func(x,d0):
 ptm_func_vec=np.vectorize(ptm_func)  # vector version
 
 # Define the d0 functions for numbers and arrays; minimum value = 1.0; from Yang and Skolnick, PROTEINS: Structure, Function, and Bioinformatics 57:702–710 (2004)
-def calc_d0(L):
+def calc_d0(L,pair_type):
     L=float(L)
-    if L<27: return 1.0
-    return 1.24*(L-15)**(1.0/3.0) - 1.8
+    if L<27: L=27
+    min_value=1.0
+    if pair_type=='nucleic_acid': min_value=2.0
+    d0=1.24*(L-15)**(1.0/3.0) - 1.8
+    return max(min_value, d0)
 
-def calc_d0_array(L):
+def calc_d0_array(L,pair_type):
     # Convert L to a NumPy array if it isn't already one (enables flexibility in input types)
     L = np.array(L, dtype=float)
-    # Ensure all values of L are at least 19.0
-    L = np.maximum(L, 26.523)
-    # Calculate d0 using the vectorized operation
-    return 1.24 * (L - 15) ** (1.0 / 3.0) - 1.8
+    L = np.maximum(27,L)
+    min_value=1.0
 
+    if pair_type=='nucleic_acid': min_value=2.0
+
+    # Calculate d0 using the vectorized operation
+    return np.maximum(min_value, 1.24 * (L - 15) ** (1.0/3.0) - 1.8)
 
 
 # Define the parse_atom_line function for PDB lines (by column) and mmCIF lines (split by white_space)
@@ -267,6 +272,37 @@ def contiguous_ranges(numbers):
     string='+'.join(ranges)
     return(string)
 
+# Initializes a nested dictionary with all values set to 0
+def init_chainpairdict_zeros(chainlist):
+    return {chain1: {chain2: 0 for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
+
+# Initializes a nested dictionary with NumPy arrays of zeros of a specified size
+def init_chainpairdict_npzeros(chainlist, arraysize):
+    return {chain1: {chain2: np.zeros(arraysize) for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
+
+# Initializes a nested dictionary with empty sets.
+def init_chainpairdict_set(chainlist):
+    return {chain1: {chain2: set() for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
+
+
+def classify_chains(chains, residue_types):
+    nuc_residue_set = {"DA", "DC", "DT", "DG", "A", "C", "U", "G"}
+    chain_types = {}
+    
+    # Get unique chains and iterate over them
+    unique_chains = np.unique(chains)
+    for chain in unique_chains:
+        # Find indices where the current chain is located
+        indices = np.where(chains == chain)[0]
+        # Get the residues for these indices
+        chain_residues = residue_types[indices]
+        # Count nucleic acid residues
+        nuc_count = sum(residue in nuc_residue_set for residue in chain_residues)
+        
+        # Determine if the chain is a nucleic acid or protein
+        chain_types[chain] = 'nucleic_acid' if nuc_count > 0 else 'protein'
+    
+    return chain_types
 
 
 # Load residues from AlphaFold PDB or mmCIF file into lists; each residue is a dictionary
@@ -284,7 +320,10 @@ token_mask=list()
 residue_set= {"ALA", "ARG", "ASN", "ASP", "CYS",
               "GLN", "GLU", "GLY", "HIS", "ILE",
               "LEU", "LYS", "MET", "PHE", "PRO",
-              "SER", "THR", "TRP", "TYR", "VAL"}
+              "SER", "THR", "TRP", "TYR", "VAL",
+              "DA", "DC", "DT", "DG", "A", "C", "U", "G"}
+
+nuc_residue_set = {"DA", "DC", "DT", "DG", "A", "C", "U", "G"}
 
 with open(pdb_path, 'r') as PDB:
     for line in PDB:
@@ -300,12 +339,11 @@ with open(pdb_path, 'r') as PDB:
                 atom=parse_cif_atom_line(line, atomsitefield_dict)
             else:
                 atom=parse_pdb_atom_line(line)
-
             if atom is None:  # ligand atom
                 token_mask.append(0)
                 continue
 
-            if atom['atom_name'] == "CA":
+            if atom['atom_name'] == "CA" or "C1" in atom['atom_name']:
                 token_mask.append(1)
                 residues.append({
                     'atom_num': atom['atom_num'],
@@ -317,7 +355,7 @@ with open(pdb_path, 'r') as PDB:
                 })
                 chains.append(atom['chain_id'])
 
-            if atom['atom_name'] == "CB" or (atom['residue_name']=="GLY" and atom['atom_name']=="CA"):
+            if atom['atom_name'] == "CB" or "C3" in atom['atom_name'] or (atom['residue_name']=="GLY" and atom['atom_name']=="CA"):
                 cb_residues.append({
                     'atom_num': atom['atom_num'],
                     'coor': np.array([atom['x'], atom['y'], atom['z']]),
@@ -328,9 +366,9 @@ with open(pdb_path, 'r') as PDB:
                 })
 
             # add nucleic acids and non-CA atoms in PTM residues to tokens (as 0), whether labeled as "HETATM" (af3) or as "ATOM" (boltz1)
-            if atom['atom_name'] != "CA" and atom['residue_name'] not in residue_set:
+            if atom['atom_name'] != "CA" and "C1" not in atom['atom_name'] and atom['residue_name'] not in residue_set:
                 token_mask.append(0)
-                
+
 # Convert structure information to numpy arrays
 numres = len(residues)
 CA_atom_num=  np.array([res['atom_num']-1 for res in residues])  # for AF3 atom indexing from 0
@@ -340,7 +378,22 @@ chains = np.array(chains)
 unique_chains = np.unique(chains)
 token_array=np.array(token_mask)
 ntokens=np.sum(token_array)
+residue_types=np.array([res['res'] for res in residues])
 
+# chain types (nucleic acid (NA) or protein) and chain_pair_types ('nucleic_acid' if either chain is NA) for d0 calculation
+# arbitrarily setting d0 to 2.0 for NA/protein or NA/NA chain pairs (approximately 21 base pairs)
+d0_nucleic_acid=2.0
+chain_dict = classify_chains(chains, residue_types)
+chain_pair_type = init_chainpairdict_zeros(unique_chains)
+for chain1 in unique_chains:
+    for chain2 in unique_chains:
+        if chain1==chain2: continue
+        if chain_dict[chain1] == 'nucleic_acid' or chain_dict[chain2] == 'nucleic_acid':
+            chain_pair_type[chain1][chain2]='nucleic_acid'
+        else:
+            chain_pair_type[chain1][chain2]='protein'
+        print(chain1, chain2, chain_dict[chain1], chain_dict[chain2], chain_pair_type[chain1][chain2])
+        
 # Calculate distance matrix using NumPy broadcasting
 distances = np.sqrt(((coordinates[:, np.newaxis, :] - coordinates[np.newaxis, :, :])**2).sum(axis=2))
 
@@ -349,10 +402,19 @@ if af2:
     if os.path.exists(pae_file_path):
         with open(pae_file_path, 'r') as file:
             data = json.load(file)
-        iptm_af2 =   float(data['iptm'])
-        ptm_af2  =   float(data['ptm'])
-        plddt =      np.array(data['plddt'])
-        cb_plddt =   np.array(data['plddt'])  # for pDockQ
+
+        if 'iptm' in data: iptm_af2 =   float(data['iptm'])
+        else: iptm_af2=-1.0
+        if 'ptm' in data: ptm_af2  =   float(data['ptm'])
+        else: ptm_af2=-1.0
+    
+        if 'plddt' in data:
+            plddt =      np.array(data['plddt'])
+            cb_plddt =   np.array(data['plddt'])  # for pDockQ
+        else:
+            plddt = np.zeros(numres)
+            cb_plddt = np.zeros(numres)
+            
         pae_matrix = np.array(data['pae'])
     else:
         print("AF2 PAE file does not exist: ", pae_file_path)
@@ -434,7 +496,6 @@ if af3:
     # Set pae_matrix for AF3 from subset of full PAE matrix from json file
     token_array=np.array(token_mask)
     pae_matrix = pae_matrix_af3[np.ix_(token_array.astype(bool), token_array.astype(bool))]
-
     # Get iptm matrix from AF3 summary_confidences file
     iptm_af3=   {chain1: {chain2: 0     for chain2 in unique_chains if chain1 != chain2} for chain1 in unique_chains}
 
@@ -477,18 +538,6 @@ if af3:
 # n0chn = number of residues in chain pair = len(chain1) + len(chain2)
 # n0dom = number of residues in chain pair that have good PAE values (<cutoff)
 # n0res = number of residues in chain2 that have good PAE residues for each residue of chain1
-
-# Initializes a nested dictionary with all values set to 0
-def init_chainpairdict_zeros(chainlist):
-    return {chain1: {chain2: 0 for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
-
-# Initializes a nested dictionary with NumPy arrays of zeros of a specified size
-def init_chainpairdict_npzeros(chainlist, arraysize):
-    return {chain1: {chain2: np.zeros(arraysize) for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
-
-# Initializes a nested dictionary with empty sets.
-def init_chainpairdict_set(chainlist):
-    return {chain1: {chain2: set() for chain2 in chainlist if chain1 != chain2} for chain1 in chainlist}
 
 iptm_d0chn_byres  = init_chainpairdict_npzeros(unique_chains, numres)
 ipsae_d0chn_byres = init_chainpairdict_npzeros(unique_chains, numres)
@@ -541,18 +590,15 @@ pDockQ  = init_chainpairdict_zeros(unique_chains)
 pDockQ2 = init_chainpairdict_zeros(unique_chains)
 LIS     = init_chainpairdict_zeros(unique_chains)
 
-
 # pDockQ
 pDockQ_cutoff=8.0
 
 for chain1 in unique_chains:
     for chain2 in unique_chains:
-        if chain1 == chain2:
-            continue
+        if chain1 == chain2:    continue
         npairs=0
         for i in range(numres):
-            if chains[i] != chain1:
-                continue
+            if chains[i] != chain1:   continue
             valid_pairs = (chains==chain2) & (distances[i] <= pDockQ_cutoff)
             npairs += np.sum(valid_pairs)
             if valid_pairs.any():
@@ -600,8 +646,8 @@ for chain1 in unique_chains:
         else:
             mean_plddt=0.0
             x=0.0
-            pDockQ[chain1][chain2]=0.0
             nres=0
+            pDockQ2[chain1][chain2]=0.0
         
 # LIS
 
@@ -622,7 +668,8 @@ for chain1 in unique_chains:
                 LIS[chain1][chain2] = 0.0  # No valid values
         else:
             LIS[chain1][chain2]=0.0
-        
+
+
 
 # calculate ipTM/ipSAE with and without PAE cutoff
 
@@ -632,7 +679,7 @@ for chain1 in unique_chains:
             continue
 
         n0chn[chain1][chain2]=np.sum( chains==chain1) + np.sum(chains==chain2) # total number of residues in chain1 and chain2
-        d0chn[chain1][chain2]=calc_d0(n0chn[chain1][chain2])
+        d0chn[chain1][chain2]=calc_d0(n0chn[chain1][chain2], chain_pair_type[chain1][chain2])
         ptm_matrix_d0chn=np.zeros((numres,numres))
         ptm_matrix_d0chn=ptm_func_vec(pae_matrix,d0chn[chain1][chain2])
 
@@ -640,6 +687,8 @@ for chain1 in unique_chains:
         valid_pairs_matrix = (chains == chain2) & (pae_matrix < pae_cutoff)
 
         for i in range(numres):
+
+
             if chains[i] != chain1:
                 continue
 
@@ -676,7 +725,7 @@ for chain1 in unique_chains:
         residues_1 = len(unique_residues_chain1[chain1][chain2])
         residues_2 = len(unique_residues_chain2[chain1][chain2])
         n0dom[chain1][chain2] = residues_1+residues_2
-        d0dom[chain1][chain2] = calc_d0(n0dom[chain1][chain2])
+        d0dom[chain1][chain2] = calc_d0(n0dom[chain1][chain2], chain_pair_type[chain1][chain2])
 
         ptm_matrix_d0dom = np.zeros((numres,numres))
         ptm_matrix_d0dom = ptm_func_vec(pae_matrix,d0dom[chain1][chain2])
@@ -685,7 +734,7 @@ for chain1 in unique_chains:
 
         # Assuming valid_pairs_matrix is already defined
         n0res_byres_all = np.sum(valid_pairs_matrix, axis=1)
-        d0res_byres_all = calc_d0_array(n0res_byres_all)
+        d0res_byres_all = calc_d0_array(n0res_byres_all, chain_pair_type[chain1][chain2])
 
         n0res_byres[chain1][chain2] = n0res_byres_all
         d0res_byres[chain1][chain2] = d0res_byres_all
@@ -802,7 +851,13 @@ for chain1 in unique_chains:
             d0res_max[chain2][chain1]=maxd0
 
                 
-chaincolor={'A':'magenta', 'B':'marine', 'C':'lime', 'D':'orange', 'E':'yellow', 'F':'cyan', 'G':'lightorange', 'H':'pink'}
+chaincolor={'A':'magenta',   'B':'marine',   'C':'lime',        'D':'orange',
+            'E':'yellow',    'F':'cyan',     'G':'lightorange', 'H':'pink',
+            'I':'deepteal',  'J':'forest',   'K':'lightblue',   'L':'slate',
+            'M':'violet',    'N':'arsenic',  'O':'iodine',      'P':'silver',
+            'Q':'red',       'R':'sulfur',   'S':'purple',      'T':'olive',
+            'U':'palegreen', 'V':'gray90',   'W':'blue',        'X':'palecyan',
+            'Y':'yellow',    'Z':'white'}
 
 chainpairs=set()
 for chain1 in unique_chains:
@@ -819,8 +874,17 @@ for pair in sorted(chainpairs):
     for pair in (pair1, pair2):
         chain1=pair[0]
         chain2=pair[1]
-        color1=chaincolor[chain1]
-        color2=chaincolor[chain2]
+
+        if chain1 in chaincolor:
+            color1=chaincolor[chain1]
+        else:
+            color1='magenta'
+
+        if chain2 in chaincolor:
+            color2=chaincolor[chain2]
+        else:
+            color2='marine'
+
         residues_1 = len(unique_residues_chain1[chain1][chain2])
         residues_2 = len(unique_residues_chain2[chain1][chain2])
         dist_residues_1 = len(dist_unique_residues_chain1[chain1][chain2])
