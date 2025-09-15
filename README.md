@@ -1,7 +1,7 @@
 # ipSAE: for binders screening
 ![ipSAE Animation](ipsae.gif)
 
-
+## Paper: What’s wrong with AlphaFold’s 𝑖𝑝𝑇𝑀 score and how to fix it https://doi.org/10.1101/2025.02.10.637595
 ## Installation
 
 ```bash
