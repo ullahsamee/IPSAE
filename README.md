@@ -1,5 +1,5 @@
 # ipSAE: for binders screening
-![ipSAE Animation](ipsae_animation.png)
+![ipSAE Animation](ipsae.gif)
 
 
 ## Installation
