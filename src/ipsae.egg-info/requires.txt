@@ -1,0 +1,7 @@
+numpy>=1.19.0
+
+[dev]
+pytest>=6.0
+pytest-cov
+black
+flake8

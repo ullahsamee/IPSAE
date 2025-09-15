@@ -1,0 +1,14 @@
+LICENSE
+MANIFEST.in
+README.md
+pyproject.toml
+src/ipsae/__init__.py
+src/ipsae/cli.py
+src/ipsae/core.py
+src/ipsae.egg-info/PKG-INFO
+src/ipsae.egg-info/SOURCES.txt
+src/ipsae.egg-info/dependency_links.txt
+src/ipsae.egg-info/entry_points.txt
+src/ipsae.egg-info/requires.txt
+src/ipsae.egg-info/top_level.txt
+tests/test_ipsae.py

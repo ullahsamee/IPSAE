@@ -1,0 +1,2 @@
+[console_scripts]
+ipsae = ipsae.cli:main

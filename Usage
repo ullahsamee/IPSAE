@@ -1,0 +1,20 @@
+Usage
+Command Line
+bash# AF2 model
+ipsae scores.json model.pdb 10 10
+
+# AF3 model (requires the full data JSON file containing PAE data)
+ipsae <name>_full_data_0.json model_0.cif 10 10
+
+# Boltz1 model
+ipsae pae_model_0.npz model_0.cif 10 10
+Python API
+pythonfrom ipsae import calculate_ipsae
+
+results = calculate_ipsae("scores.json", "model.pdb", 15, 15)
+Features
+
+Supports AlphaFold2, AlphaFold3, and Boltz1 models
+Calculates ipSAE, pDockQ, pDockQ2, and LIS scores
+Handles both PDB and mmCIF formats
+Generates PyMOL visualization scripts
